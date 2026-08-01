@@ -78,6 +78,7 @@ class ServeConfig:
     kv_cache_dtype: str
     enable_prefix_caching: bool
     enable_per_request_metrics: bool
+    wsl2_enable_pin_memory: bool
     local_model_path: Path | None = None
     local_model_manifest_sha256: str | None = None
 
@@ -128,6 +129,9 @@ class ServeConfig:
             ),
             enable_per_request_metrics=_required(
                 server, "enable_per_request_metrics", bool
+            ),
+            wsl2_enable_pin_memory=_required(
+                server, "wsl2_enable_pin_memory", bool
             ),
         )
 

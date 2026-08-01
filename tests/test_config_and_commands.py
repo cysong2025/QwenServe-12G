@@ -4,7 +4,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from qwen_serve_lab.commands import build_benchmark_command, build_serve_command
+from qwen_serve_lab.commands import (
+    build_benchmark_command,
+    build_serve_command,
+    build_serve_environment,
+    render_shell_command,
+)
 from qwen_serve_lab.config import (
     BenchmarkConfig,
     BenchmarkMatrix,
@@ -27,6 +32,15 @@ class ServeConfigTests(unittest.TestCase):
         self.assertIn("--no-enable-prefix-caching", command)
         self.assertIn("--enable-per-request-metrics", command)
         self.assertEqual(config.max_model_len, 8192)
+        self.assertEqual(
+            build_serve_environment(config),
+            {"VLLM_WSL2_ENABLE_PIN_MEMORY": "1"},
+        )
+        self.assertTrue(
+            render_shell_command(command, build_serve_environment(config)).startswith(
+                "env VLLM_WSL2_ENABLE_PIN_MEMORY=1 vllm serve"
+            )
+        )
 
     def test_prefix_profile_changes_only_the_intended_switch(self) -> None:
         baseline = ServeConfig.from_file(ROOT / "configs/serve/baseline.toml")
@@ -37,6 +51,9 @@ class ServeConfigTests(unittest.TestCase):
         self.assertEqual(baseline.model, prefix.model)
         self.assertEqual(baseline.revision, prefix.revision)
         self.assertEqual(baseline.max_model_len, prefix.max_model_len)
+        self.assertEqual(
+            baseline.wsl2_enable_pin_memory, prefix.wsl2_enable_pin_memory
+        )
 
     def test_local_model_override_omits_remote_revision(self) -> None:
         config = ServeConfig.from_file(ROOT / "configs/serve/baseline.toml")

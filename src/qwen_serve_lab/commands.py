@@ -6,6 +6,14 @@ import shlex
 from qwen_serve_lab.config import BenchmarkConfig, ServeConfig
 
 
+def build_serve_environment(config: ServeConfig) -> dict[str, str]:
+    return {
+        "VLLM_WSL2_ENABLE_PIN_MEMORY": (
+            "1" if config.wsl2_enable_pin_memory else "0"
+        )
+    }
+
+
 def build_serve_command(config: ServeConfig) -> list[str]:
     command = [
         "vllm",
@@ -115,5 +123,10 @@ def build_benchmark_command(
     return command
 
 
-def render_shell_command(command: list[str]) -> str:
+def render_shell_command(
+    command: list[str], environment: dict[str, str] | None = None
+) -> str:
+    if environment:
+        assignments = [f"{key}={environment[key]}" for key in sorted(environment)]
+        command = ["env", *assignments, *command]
     return shlex.join(command)

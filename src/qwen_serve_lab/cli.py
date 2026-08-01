@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import asdict
 import json
+import os
 import subprocess
 import sys
 import time
@@ -12,6 +13,7 @@ from pathlib import Path
 from qwen_serve_lab.commands import (
     build_benchmark_command,
     build_serve_command,
+    build_serve_environment,
     render_shell_command,
 )
 from qwen_serve_lab.config import (
@@ -130,6 +132,7 @@ def _run_server(config_path: Path, model_path: Path | None = None) -> int:
     config = _load_serve_config(config_path, model_path)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     command = build_serve_command(config)
+    environment_overrides = build_serve_environment(config)
     log_path = Path("artifacts/server") / f"{timestamp}-{config.profile_name}.log"
     manifest_path = (
         Path("artifacts/env") / f"{timestamp}-server-{config.profile_name}.json"
@@ -143,7 +146,8 @@ def _run_server(config_path: Path, model_path: Path | None = None) -> int:
         "server_config_sha256": config.source_sha256,
         "effective_config": _effective_serve_config(config),
         "environment": collect_environment(),
-        "command": render_shell_command(command),
+        "environment_overrides": environment_overrides,
+        "command": render_shell_command(command, environment_overrides),
         "log": str(log_path),
         "returncode": None,
         "stopped_by_user": False,
@@ -151,17 +155,20 @@ def _run_server(config_path: Path, model_path: Path | None = None) -> int:
     write_json(manifest, manifest_path)
     print(f"Server manifest: {manifest_path}")
     print(f"Server log: {log_path}")
-    print(render_shell_command(command))
+    print(render_shell_command(command, environment_overrides))
 
     process: subprocess.Popen[str] | None = None
     try:
         with log_path.open("w", encoding="utf-8") as log_handle:
+            process_environment = os.environ.copy()
+            process_environment.update(environment_overrides)
             process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
+                env=process_environment,
             )
             if process.stdout is not None:
                 for line in process.stdout:
@@ -287,7 +294,11 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "render-serve":
             config = _load_serve_config(args.config, args.model_path)
-            print(render_shell_command(build_serve_command(config)))
+            print(
+                render_shell_command(
+                    build_serve_command(config), build_serve_environment(config)
+                )
+            )
             return 0
         if args.command == "run-serve":
             return _run_server(args.config, args.model_path)
