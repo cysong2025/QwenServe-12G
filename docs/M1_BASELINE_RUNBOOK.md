@@ -30,7 +30,12 @@ make test
 make doctor
 ```
 
-只有 `linux`、`wsl2`、`nvidia-smi`、`target-gpu`、`gpu-memory`、`vllm` 和 `torch-cuda` 全部 PASS 才通过 G0。
+只有 `linux`、`wsl2`、`nvidia-smi`、`target-gpu`、`gpu-memory`、`vllm`、`vllm-bench` 和 `torch-cuda` 全部 PASS 才通过 G0。若 `vllm-bench` 报告 `pyarrow` 缺少 `PyExtensionType`，说明旧版 `datasets` 与 PyArrow 21+ 不兼容，执行以下命令修复已有虚拟环境：
+
+```bash
+make repair-bench-deps
+make doctor
+```
 
 若 WSL2 可访问 PyPI 但无法访问 `huggingface.co`，不更改 vLLM 或 CUDA 环境。改用 Qwen 官方 ModelScope 源下载本地快照：
 

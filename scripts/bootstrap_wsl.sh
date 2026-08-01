@@ -22,7 +22,10 @@ fi
 nvidia-smi
 uv venv --python "${PYTHON_VERSION}" --seed .venv
 source .venv/bin/activate
-uv pip install "vllm[bench]==${VLLM_VERSION}" --torch-backend=auto
+uv pip install \
+  --constraint constraints/vllm-0.25.1.txt \
+  "vllm[bench]==${VLLM_VERSION}" \
+  --torch-backend=auto
 uv pip install --editable .
 uv pip freeze > artifacts/env/bootstrap-freeze.txt
 python -m qwen_serve_lab.cli doctor

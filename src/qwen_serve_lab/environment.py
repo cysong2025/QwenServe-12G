@@ -72,6 +72,23 @@ def _git_snapshot(project_root: Path) -> dict[str, Any]:
     }
 
 
+def _vllm_bench_snapshot() -> dict[str, Any]:
+    result = _run(["vllm", "bench", "serve", "--help"])
+    if result.get("ok"):
+        return {"ok": True, "detail": "benchmark CLI imports successfully"}
+    detail = (
+        result.get("stderr")
+        or result.get("stdout")
+        or result.get("error")
+        or "benchmark CLI is unavailable"
+    )
+    return {
+        "ok": False,
+        "returncode": result.get("returncode"),
+        "detail": str(detail)[-2000:],
+    }
+
+
 def parse_nvidia_smi_rows(output: str) -> list[dict[str, Any]]:
     gpus: list[dict[str, Any]] = []
     for line in output.splitlines():
@@ -126,6 +143,7 @@ def collect_environment(project_root: str | Path = ".") -> dict[str, Any]:
             for name in ("uv", "vllm", "nvidia-smi", "git")
         },
         "vllm": _run(["vllm", "--version"]),
+        "vllm_bench": _vllm_bench_snapshot(),
         "nvidia_smi": nvidia_query,
         "torch": _torch_snapshot(),
         "git": _git_snapshot(root),
@@ -150,6 +168,7 @@ def run_doctor() -> list[DoctorCheck]:
     torch_info = snapshot["torch"]
     executables = snapshot["executables"]
     nvidia_info = snapshot["nvidia_smi"]
+    vllm_bench_info = snapshot["vllm_bench"]
     gpus = nvidia_info.get("gpus", [])
     primary_gpu = gpus[0] if gpus else {}
 
@@ -184,6 +203,11 @@ def run_doctor() -> list[DoctorCheck]:
             bool(executables["vllm"]),
             snapshot["vllm"].get("stdout")
             or snapshot["vllm"].get("error", "not installed"),
+        ),
+        DoctorCheck(
+            "vllm-bench",
+            bool(vllm_bench_info.get("ok")),
+            str(vllm_bench_info.get("detail", "benchmark CLI is unavailable")),
         ),
         DoctorCheck(
             "torch-cuda",

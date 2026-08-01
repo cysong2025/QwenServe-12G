@@ -13,6 +13,7 @@ class EnvironmentTests(unittest.TestCase):
         self.assertEqual(snapshot["schema_version"], 1)
         self.assertIn("platform", snapshot)
         self.assertIn("torch", snapshot)
+        self.assertIn("vllm_bench", snapshot)
         self.assertIn("nvidia_smi", snapshot)
         self.assertIn("git", snapshot)
 
