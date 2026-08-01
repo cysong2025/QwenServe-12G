@@ -1,0 +1,19 @@
+[profile]
+name = "prefix_cache_bf16"
+description = "Baseline with automatic prefix caching enabled"
+
+[server]
+model = "Qwen/Qwen2.5-3B-Instruct"
+revision = "a1d308dfcc03e09da285d49d912439a655a571e8"
+served_model_name = "qwen2.5-3b-instruct"
+host = "127.0.0.1"
+port = 8000
+dtype = "bfloat16"
+generation_config = "vllm"
+max_model_len = 8192
+gpu_memory_utilization = 0.82
+max_num_seqs = 8
+max_num_batched_tokens = 8192
+kv_cache_dtype = "bfloat16"
+enable_prefix_caching = true
+enable_per_request_metrics = true

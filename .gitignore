@@ -1,0 +1,29 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+build/
+dist/
+
+# Local transfer packages and editor metadata
+QwenServe-12G-*.zip
+.DS_Store
+
+# Model, dataset, and training caches
+.cache/
+models/
+data/
+checkpoints/
+wandb/
+*.safetensors
+*.gguf
+
+# Machine-specific raw outputs. Keep the directory skeleton in Git.
+artifacts/env/*
+!artifacts/env/.gitkeep
+artifacts/results/*
+!artifacts/results/.gitkeep
+artifacts/server/*
+!artifacts/server/.gitkeep

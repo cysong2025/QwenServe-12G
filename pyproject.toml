@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qwen-serve-lab"
+version = "0.1.0"
+description = "Reproducible single-GPU vLLM inference and QLoRA experiments"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+qsl = "qwen_serve_lab.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
