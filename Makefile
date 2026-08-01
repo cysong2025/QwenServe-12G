@@ -34,16 +34,16 @@ render-prefix:
 	$(QSL) render-serve configs/serve/prefix_cache.toml
 
 render-baseline-matrix:
-	$(QSL) render-matrix configs/matrix/baseline.toml
+	$(QSL) render-matrix configs/matrix/baseline.toml --tokenizer-path "$(MODEL_PATH)"
 
 bench-smoke:
-	$(QSL) run-bench configs/bench/smoke.toml
+	$(QSL) run-bench configs/bench/smoke.toml --tokenizer-path "$(MODEL_PATH)"
 
 bench-baseline:
-	$(QSL) run-bench configs/bench/baseline_short_c1.toml
+	$(QSL) run-bench configs/bench/baseline_short_c1.toml --tokenizer-path "$(MODEL_PATH)"
 
 bench-baseline-matrix:
-	$(QSL) run-matrix configs/matrix/baseline.toml
+	$(QSL) run-matrix configs/matrix/baseline.toml --tokenizer-path "$(MODEL_PATH)"
 
 summarize:
 	$(QSL) summarize --manifest-dir artifacts/env --output-dir reports/baseline --profile-prefix e01_baseline

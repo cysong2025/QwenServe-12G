@@ -113,6 +113,23 @@ class BenchmarkConfigTests(unittest.TestCase):
         self.assertIn("--temperature", command)
         self.assertIn("benchmark_config_sha256=" + config.source_sha256, command)
 
+    def test_local_tokenizer_is_explicit_and_fingerprinted(self) -> None:
+        config = BenchmarkConfig.from_file(ROOT / "configs/bench/smoke.toml")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tokenizer_path = Path(temp_dir)
+            for filename in ("tokenizer.json", "tokenizer_config.json"):
+                (tokenizer_path / filename).write_text("test")
+            (tokenizer_path / "SHA256SUMS").write_text(
+                "fixture  tokenizer.json\n", encoding="utf-8"
+            )
+
+            local_config = config.with_local_tokenizer(tokenizer_path)
+            command = build_benchmark_command(local_config)
+
+        tokenizer_index = command.index("--tokenizer")
+        self.assertEqual(command[tokenizer_index + 1], str(tokenizer_path.resolve()))
+        self.assertIsNotNone(local_config.local_tokenizer_manifest_sha256)
+
     def test_formal_baseline_has_three_repetitions(self) -> None:
         config = BenchmarkConfig.from_file(
             ROOT / "configs/bench/baseline_short_c1.toml"

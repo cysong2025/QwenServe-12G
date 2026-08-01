@@ -79,7 +79,9 @@ make render-baseline-local
 make serve-baseline-local
 ```
 
-本地快照启动会省略 Hub `--revision`，但 server manifest 仍保留规范模型 ID、规范 revision、本地绝对路径与 `SHA256SUMS` 指纹。对外 `served_model_name` 不变，因此 benchmark 命令不变。
+本地快照启动会省略 Hub `--revision`，但 server manifest 仍保留规范模型 ID、规范 revision、本地绝对路径与 `SHA256SUMS` 指纹。对外 `served_model_name` 不变，因此 benchmark 请求中的模型名不变。
+
+Makefile 的 benchmark 目标会显式传入 `--tokenizer ~/models/Qwen2.5-3B-Instruct`，避免客户端访问 Hugging Face。若模型目录不同，所有服务和 benchmark 命令都必须使用相同的 `MODEL_PATH=/absolute/path`。benchmark manifest 会保存 tokenizer 路径及其 `SHA256SUMS` 指纹。
 
 RTX 5070 在 WSL2 上使用 vLLM V2 Model Runner 时需要 UVA。两个受控 serve profile 都显式设置 `wsl2_enable_pin_memory=true`，运行命令对应 `VLLM_WSL2_ENABLE_PIN_MEMORY=1`。该值必须出现在 server manifest 的 `environment_overrides` 中；正式矩阵不得在轮次间改变。
 

@@ -201,6 +201,8 @@ class BenchmarkConfig:
     cooldown_seconds: int
     ready_check_timeout_seconds: int
     result_dir: Path
+    local_tokenizer_path: Path | None = None
+    local_tokenizer_manifest_sha256: str | None = None
 
     @classmethod
     def from_file(cls, path: str | Path) -> "BenchmarkConfig":
@@ -312,6 +314,31 @@ class BenchmarkConfig:
             cooldown_seconds=cooldown_seconds,
             ready_check_timeout_seconds=ready_check_timeout_seconds,
             result_dir=Path(result_dir),
+        )
+
+    def with_local_tokenizer(self, path: str | Path) -> "BenchmarkConfig":
+        tokenizer_path = Path(path).expanduser().resolve()
+        if not tokenizer_path.is_dir():
+            raise ConfigError(
+                f"Local tokenizer directory does not exist: {tokenizer_path}"
+            )
+
+        required_files = ("tokenizer.json", "tokenizer_config.json", "SHA256SUMS")
+        missing = [
+            name for name in required_files if not (tokenizer_path / name).is_file()
+        ]
+        if missing:
+            raise ConfigError(
+                "Local tokenizer directory is incomplete; missing: "
+                + ", ".join(missing)
+            )
+
+        return replace(
+            self,
+            local_tokenizer_path=tokenizer_path,
+            local_tokenizer_manifest_sha256=_sha256(
+                tokenizer_path / "SHA256SUMS"
+            ),
         )
 
 

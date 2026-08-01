@@ -77,6 +77,8 @@ make serve-baseline-local
 
 默认路径为 `~/models/Qwen2.5-3B-Instruct`，可通过 `MODEL_PATH=/absolute/path` 覆盖。下载脚本使用隔离的 ModelScope CLI，并为模型根目录文件生成 `SHA256SUMS`。本地启动的 server manifest 会记录该文件的 SHA-256；同一轮正式实验不得混用 Hub 与 ModelScope 快照。
 
+所有 Makefile benchmark 目标也会将该目录作为显式 `--tokenizer` 参数，避免 benchmark 客户端根据规范模型 ID 再次访问 Hugging Face。benchmark manifest 会记录 tokenizer 绝对路径和 `SHA256SUMS` 指纹；API 请求仍使用固定的 `served_model_name`。
+
 WSL2 中 vLLM V2 Model Runner 需要 pinned memory/UVA。受控服务配置会显式设置 `VLLM_WSL2_ENABLE_PIN_MEMORY=1`，并将该环境覆盖写入 server manifest；不需要手工 `export`。
 
 RTX 5070 的 Blackwell `sm120` 架构会触发 vLLM 0.25.1 所带 FlashInfer 采样器的架构识别错误：明明高于 `sm75`，启动时仍报告 `FlashInfer requires GPUs with sm75 or higher`。两个受控 profile 固定设置 `VLLM_USE_FLASHINFER_SAMPLER=0`，仅将 top-k/top-p 采样回退到 PyTorch 原生实现；其余推理路径保持不变。该值同样记录在 server manifest 中。

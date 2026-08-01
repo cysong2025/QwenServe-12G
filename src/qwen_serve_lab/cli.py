@@ -61,21 +61,25 @@ def _parser() -> argparse.ArgumentParser:
     )
     benchmark.add_argument("config", type=Path)
     benchmark.add_argument("--repetition", type=int, default=1)
+    benchmark.add_argument("--tokenizer-path", type=Path)
 
     run = subparsers.add_parser(
         "run-bench", help="Snapshot the environment and execute benchmark repetitions"
     )
     run.add_argument("config", type=Path)
+    run.add_argument("--tokenizer-path", type=Path)
 
     render_matrix = subparsers.add_parser(
         "render-matrix", help="Render every effective benchmark in a matrix"
     )
     render_matrix.add_argument("config", type=Path)
+    render_matrix.add_argument("--tokenizer-path", type=Path)
 
     run_matrix = subparsers.add_parser(
         "run-matrix", help="Execute a benchmark matrix with manifests and telemetry"
     )
     run_matrix.add_argument("config", type=Path)
+    run_matrix.add_argument("--tokenizer-path", type=Path)
     run_matrix.add_argument(
         "--only",
         action="append",
@@ -258,13 +262,30 @@ def _execute_benchmark(config: BenchmarkConfig) -> int:
     return 0
 
 
-def _run_benchmark(config_path: Path) -> int:
-    return _execute_benchmark(BenchmarkConfig.from_file(config_path))
+def _load_benchmark_config(
+    config_path: Path, tokenizer_path: Path | None
+) -> BenchmarkConfig:
+    config = BenchmarkConfig.from_file(config_path)
+    if tokenizer_path is not None:
+        config = config.with_local_tokenizer(tokenizer_path)
+    return config
 
 
-def _run_matrix(config_path: Path, selected: list[str]) -> int:
+def _run_benchmark(config_path: Path, tokenizer_path: Path | None) -> int:
+    return _execute_benchmark(
+        _load_benchmark_config(config_path, tokenizer_path)
+    )
+
+
+def _run_matrix(
+    config_path: Path, selected: list[str], tokenizer_path: Path | None
+) -> int:
     matrix = BenchmarkMatrix.from_file(config_path)
     configs = list(matrix.configs)
+    if tokenizer_path is not None:
+        configs = [
+            config.with_local_tokenizer(tokenizer_path) for config in configs
+        ]
     if selected:
         selected_set = set(selected)
         known = {config.profile_name for config in configs}
@@ -303,7 +324,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "run-serve":
             return _run_server(args.config, args.model_path)
         if args.command == "render-bench":
-            config = BenchmarkConfig.from_file(args.config)
+            config = _load_benchmark_config(args.config, args.tokenizer_path)
             print(
                 render_shell_command(
                     build_benchmark_command(config, repetition=args.repetition)
@@ -311,15 +332,21 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 0
         if args.command == "run-bench":
-            return _run_benchmark(args.config)
+            return _run_benchmark(args.config, args.tokenizer_path)
         if args.command == "render-matrix":
             matrix = BenchmarkMatrix.from_file(args.config)
-            for config in matrix.configs:
+            configs = list(matrix.configs)
+            if args.tokenizer_path is not None:
+                configs = [
+                    config.with_local_tokenizer(args.tokenizer_path)
+                    for config in configs
+                ]
+            for config in configs:
                 command = build_benchmark_command(config, repetition=1)
                 print(f"[{config.profile_name}] {render_shell_command(command)}")
             return 0
         if args.command == "run-matrix":
-            return _run_matrix(args.config, args.only)
+            return _run_matrix(args.config, args.only, args.tokenizer_path)
         if args.command == "summarize":
             records = load_records_from_manifests(
                 args.manifest_dir, profile_prefix=args.profile_prefix

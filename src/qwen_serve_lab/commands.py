@@ -73,6 +73,10 @@ def build_benchmark_command(
         config.endpoint,
         "--model",
         config.model,
+    ]
+    if config.local_tokenizer_path is not None:
+        command.extend(["--tokenizer", str(config.local_tokenizer_path)])
+    command.extend([
         "--served-model-name",
         config.served_model_name,
         "--dataset-name",
@@ -120,7 +124,7 @@ def build_benchmark_command(
         "--save-detailed",
         "--result-dir",
         str(config.result_dir),
-    ]
+    ])
     if config.ignore_eos:
         command.append("--ignore-eos")
     return command
