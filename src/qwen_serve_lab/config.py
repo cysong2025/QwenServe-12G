@@ -79,6 +79,7 @@ class ServeConfig:
     enable_prefix_caching: bool
     enable_per_request_metrics: bool
     wsl2_enable_pin_memory: bool
+    use_flashinfer_sampler: bool
     local_model_path: Path | None = None
     local_model_manifest_sha256: str | None = None
 
@@ -132,6 +133,9 @@ class ServeConfig:
             ),
             wsl2_enable_pin_memory=_required(
                 server, "wsl2_enable_pin_memory", bool
+            ),
+            use_flashinfer_sampler=_required(
+                server, "use_flashinfer_sampler", bool
             ),
         )
 

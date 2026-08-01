@@ -79,6 +79,8 @@ make serve-baseline-local
 
 WSL2 中 vLLM V2 Model Runner 需要 pinned memory/UVA。受控服务配置会显式设置 `VLLM_WSL2_ENABLE_PIN_MEMORY=1`，并将该环境覆盖写入 server manifest；不需要手工 `export`。
 
+RTX 5070 的 Blackwell `sm120` 架构会触发 vLLM 0.25.1 所带 FlashInfer 采样器的架构识别错误：明明高于 `sm75`，启动时仍报告 `FlashInfer requires GPUs with sm75 or higher`。两个受控 profile 固定设置 `VLLM_USE_FLASHINFER_SAMPLER=0`，仅将 top-k/top-p 采样回退到 PyTorch 原生实现；其余推理路径保持不变。该值同样记录在 server manifest 中。
+
 `render-baseline` 只打印经过校验的命令；`serve-baseline` 启动服务并自动保存 server manifest 与完整日志。服务启动后，在另一个 WSL2 终端执行：
 
 ```bash

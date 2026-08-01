@@ -8,9 +8,12 @@ from qwen_serve_lab.config import BenchmarkConfig, ServeConfig
 
 def build_serve_environment(config: ServeConfig) -> dict[str, str]:
     return {
+        "VLLM_USE_FLASHINFER_SAMPLER": (
+            "1" if config.use_flashinfer_sampler else "0"
+        ),
         "VLLM_WSL2_ENABLE_PIN_MEMORY": (
             "1" if config.wsl2_enable_pin_memory else "0"
-        )
+        ),
     }
 
 

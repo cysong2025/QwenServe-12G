@@ -18,3 +18,4 @@ kv_cache_dtype = "bfloat16"
 enable_prefix_caching = true
 enable_per_request_metrics = true
 wsl2_enable_pin_memory = true
+use_flashinfer_sampler = false

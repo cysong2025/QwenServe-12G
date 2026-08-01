@@ -34,11 +34,15 @@ class ServeConfigTests(unittest.TestCase):
         self.assertEqual(config.max_model_len, 8192)
         self.assertEqual(
             build_serve_environment(config),
-            {"VLLM_WSL2_ENABLE_PIN_MEMORY": "1"},
+            {
+                "VLLM_USE_FLASHINFER_SAMPLER": "0",
+                "VLLM_WSL2_ENABLE_PIN_MEMORY": "1",
+            },
         )
         self.assertTrue(
             render_shell_command(command, build_serve_environment(config)).startswith(
-                "env VLLM_WSL2_ENABLE_PIN_MEMORY=1 vllm serve"
+                "env VLLM_USE_FLASHINFER_SAMPLER=0 "
+                "VLLM_WSL2_ENABLE_PIN_MEMORY=1 vllm serve"
             )
         )
 
@@ -53,6 +57,9 @@ class ServeConfigTests(unittest.TestCase):
         self.assertEqual(baseline.max_model_len, prefix.max_model_len)
         self.assertEqual(
             baseline.wsl2_enable_pin_memory, prefix.wsl2_enable_pin_memory
+        )
+        self.assertEqual(
+            baseline.use_flashinfer_sampler, prefix.use_flashinfer_sampler
         )
 
     def test_local_model_override_omits_remote_revision(self) -> None:
