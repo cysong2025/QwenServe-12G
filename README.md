@@ -54,9 +54,10 @@ wsl --update
 进入 WSL2 后，将仓库克隆到 Linux 文件系统，不要在 `/mnt/c` 下运行：
 
 ```bash
+ssh -T git@github.com
 mkdir -p ~/projects
 cd ~/projects
-git clone https://github.com/cysong2025/QwenServe-12G.git
+git clone git@github.com:cysong2025/QwenServe-12G.git
 cd QwenServe-12G
 
 bash scripts/bootstrap_wsl.sh
