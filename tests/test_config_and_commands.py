@@ -38,6 +38,30 @@ class ServeConfigTests(unittest.TestCase):
         self.assertEqual(baseline.revision, prefix.revision)
         self.assertEqual(baseline.max_model_len, prefix.max_model_len)
 
+    def test_local_model_override_omits_remote_revision(self) -> None:
+        config = ServeConfig.from_file(ROOT / "configs/serve/baseline.toml")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            model_path = Path(temp_dir)
+            for filename in ("config.json", "tokenizer.json", "model.safetensors"):
+                (model_path / filename).write_text("test")
+            (model_path / "SHA256SUMS").write_text(
+                "fixture  config.json\n", encoding="utf-8"
+            )
+
+            local_config = config.with_local_model(model_path)
+            command = build_serve_command(local_config)
+
+        self.assertEqual(command[:3], ["vllm", "serve", str(model_path.resolve())])
+        self.assertNotIn("--revision", command)
+        self.assertEqual(local_config.model, config.model)
+        self.assertIsNotNone(local_config.local_model_manifest_sha256)
+
+    def test_local_model_override_rejects_incomplete_snapshot(self) -> None:
+        config = ServeConfig.from_file(ROOT / "configs/serve/baseline.toml")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaises(ConfigError):
+                config.with_local_model(temp_dir)
+
     def test_invalid_memory_fraction_is_rejected(self) -> None:
         config_text = (ROOT / "configs/serve/baseline.toml").read_text()
         config_text = config_text.replace(

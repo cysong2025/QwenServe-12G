@@ -66,6 +66,16 @@ make render-baseline
 make serve-baseline
 ```
 
+若 `huggingface.co` 在 WSL2 中不可达，使用 Qwen 官方 ModelScope 仓库下载本地快照：
+
+```bash
+make download-model-modelscope
+make render-baseline-local
+make serve-baseline-local
+```
+
+默认路径为 `~/models/Qwen2.5-3B-Instruct`，可通过 `MODEL_PATH=/absolute/path` 覆盖。下载脚本使用隔离的 ModelScope CLI，并为模型根目录文件生成 `SHA256SUMS`。本地启动的 server manifest 会记录该文件的 SHA-256；同一轮正式实验不得混用 Hub 与 ModelScope 快照。
+
 `render-baseline` 只打印经过校验的命令；`serve-baseline` 启动服务并自动保存 server manifest 与完整日志。服务启动后，在另一个 WSL2 终端执行：
 
 ```bash

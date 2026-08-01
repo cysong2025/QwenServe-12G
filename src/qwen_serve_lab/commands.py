@@ -10,9 +10,11 @@ def build_serve_command(config: ServeConfig) -> list[str]:
     command = [
         "vllm",
         "serve",
-        config.model,
-        "--revision",
-        config.revision,
+        config.effective_model,
+    ]
+    if config.local_model_path is None:
+        command.extend(["--revision", config.revision])
+    command.extend([
         "--served-model-name",
         config.served_model_name,
         "--host",
@@ -33,7 +35,7 @@ def build_serve_command(config: ServeConfig) -> list[str]:
         str(config.max_num_batched_tokens),
         "--kv-cache-dtype",
         config.kv_cache_dtype,
-    ]
+    ])
     command.append(
         "--enable-prefix-caching"
         if config.enable_prefix_caching

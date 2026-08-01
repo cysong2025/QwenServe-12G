@@ -32,6 +32,14 @@ make doctor
 
 只有 `linux`、`wsl2`、`nvidia-smi`、`target-gpu`、`gpu-memory`、`vllm` 和 `torch-cuda` 全部 PASS 才通过 G0。
 
+若 WSL2 可访问 PyPI 但无法访问 `huggingface.co`，不更改 vLLM 或 CUDA 环境。改用 Qwen 官方 ModelScope 源下载本地快照：
+
+```bash
+make download-model-modelscope
+```
+
+完成后必须存在 `~/models/Qwen2.5-3B-Instruct/SHA256SUMS`。保留下载来源、该文件及其 SHA-256，并在整个 M1 矩阵中使用同一快照。
+
 ## 3. 启动受控基线
 
 渲染并检查命令：
@@ -58,6 +66,15 @@ prefix_caching=false
 ```bash
 make serve-baseline
 ```
+
+使用 ModelScope 本地快照时，对应命令为：
+
+```bash
+make render-baseline-local
+make serve-baseline-local
+```
+
+本地快照启动会省略 Hub `--revision`，但 server manifest 仍保留规范模型 ID、规范 revision、本地绝对路径与 `SHA256SUMS` 指纹。对外 `served_model_name` 不变，因此 benchmark 命令不变。
 
 它会把环境、配置哈希和命令写入 `artifacts/env`，完整启动日志写入 `artifacts/server`。若 OOM，先保留失败 manifest 和日志，再按照可行性文档中的顺序降低资源参数；修改后必须创建新的 server profile，不能覆盖 baseline。
 

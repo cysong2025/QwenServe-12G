@@ -46,11 +46,13 @@ def _parser() -> argparse.ArgumentParser:
 
     serve = subparsers.add_parser("render-serve", help="Render a validated vLLM command")
     serve.add_argument("config", type=Path)
+    serve.add_argument("--model-path", type=Path)
 
     run_serve = subparsers.add_parser(
         "run-serve", help="Run vLLM while capturing logs and a server manifest"
     )
     run_serve.add_argument("config", type=Path)
+    run_serve.add_argument("--model-path", type=Path)
 
     benchmark = subparsers.add_parser(
         "render-bench", help="Render one validated vLLM benchmark command"
@@ -117,8 +119,15 @@ def _effective_serve_config(config: ServeConfig) -> dict[str, object]:
     return payload
 
 
-def _run_server(config_path: Path) -> int:
+def _load_serve_config(config_path: Path, model_path: Path | None) -> ServeConfig:
     config = ServeConfig.from_file(config_path)
+    if model_path is not None:
+        config = config.with_local_model(model_path)
+    return config
+
+
+def _run_server(config_path: Path, model_path: Path | None = None) -> int:
+    config = _load_serve_config(config_path, model_path)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     command = build_serve_command(config)
     log_path = Path("artifacts/server") / f"{timestamp}-{config.profile_name}.log"
@@ -277,10 +286,11 @@ def main(argv: list[str] | None = None) -> int:
             print(output)
             return 0
         if args.command == "render-serve":
-            print(render_shell_command(build_serve_command(ServeConfig.from_file(args.config))))
+            config = _load_serve_config(args.config, args.model_path)
+            print(render_shell_command(build_serve_command(config)))
             return 0
         if args.command == "run-serve":
-            return _run_server(args.config)
+            return _run_server(args.config, args.model_path)
         if args.command == "render-bench":
             config = BenchmarkConfig.from_file(args.config)
             print(

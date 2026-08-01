@@ -4,7 +4,7 @@ import math
 import hashlib
 import json
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -78,6 +78,8 @@ class ServeConfig:
     kv_cache_dtype: str
     enable_prefix_caching: bool
     enable_per_request_metrics: bool
+    local_model_path: Path | None = None
+    local_model_manifest_sha256: str | None = None
 
     @classmethod
     def from_file(cls, path: str | Path) -> "ServeConfig":
@@ -128,6 +130,37 @@ class ServeConfig:
                 server, "enable_per_request_metrics", bool
             ),
         )
+
+    def with_local_model(self, path: str | Path) -> "ServeConfig":
+        model_path = Path(path).expanduser().resolve()
+        if not model_path.is_dir():
+            raise ConfigError(f"Local model directory does not exist: {model_path}")
+
+        required_files = ("config.json", "tokenizer.json", "SHA256SUMS")
+        missing = [
+            name for name in required_files if not (model_path / name).is_file()
+        ]
+        if missing:
+            raise ConfigError(
+                f"Local model directory is incomplete; missing: {', '.join(missing)}"
+            )
+        if not any(model_path.glob("*.safetensors")):
+            raise ConfigError(
+                f"Local model directory contains no safetensors weights: {model_path}"
+            )
+
+        manifest_path = model_path / "SHA256SUMS"
+        return replace(
+            self,
+            local_model_path=model_path,
+            local_model_manifest_sha256=_sha256(manifest_path),
+        )
+
+    @property
+    def effective_model(self) -> str:
+        if self.local_model_path is not None:
+            return str(self.local_model_path)
+        return self.model
 
 
 @dataclass(frozen=True)
