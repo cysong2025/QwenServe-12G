@@ -265,6 +265,17 @@ def aggregate_records(records: list[ResultRecord]) -> list[dict[str, Any]]:
             if record.peak_memory_used_mib is not None
         ]
         telemetry_complete = len(peak_values) == len(group)
+        evidence_valid = (
+            consistent
+            and telemetry_complete
+            and len(group) >= 3
+            and all(record.valid for record in group)
+        )
+        slo_compliant = evidence_valid and all(
+            record.p95_ttft_ms <= record.slo_ttft_ms
+            and record.p95_tpot_ms <= record.slo_tpot_ms
+            for record in group
+        )
         aggregates.append(
             {
                 "profile": profile,
@@ -285,16 +296,20 @@ def aggregate_records(records: list[ResultRecord]) -> list[dict[str, Any]]:
                 "p95_e2el_ms": _median(group, "p95_e2el_ms"),
                 "error_rate": _median(group, "error_rate"),
                 "peak_memory_used_mib": max(peak_values) if peak_values else None,
-                "status": (
-                    "PASS"
-                    if consistent
-                    and telemetry_complete
-                    and len(group) >= 3
-                    and all(r.valid for r in group)
-                    else "INCOMPLETE"
+                "evidence_status": "VALID" if evidence_valid else "INCOMPLETE",
+                "slo_status": (
+                    "PASS" if slo_compliant else "FAIL" if evidence_valid else "UNKNOWN"
                 ),
             }
         )
+    aggregates.sort(
+        key=lambda row: (
+            row["input_len"],
+            row["output_len"],
+            row["max_concurrency"],
+            row["profile"],
+        )
+    )
     return aggregates
 
 
@@ -320,15 +335,16 @@ def write_reports(
         f"Generated at: {datetime.now(timezone.utc).isoformat()}",
         "",
         "Metrics are median [minimum, maximum] across repetitions; peak VRAM is the maximum observed sample.",
+        "Evidence is VALID when three consistent runs have complete telemetry and error rate below 1%; SLO PASS requires every repetition to meet both P95 limits.",
         "",
-        "| Profile | Runs | In/Out | C | SLO TTFT/TPOT ms | Goodput req/s | Output tok/s | P95 TTFT ms | P95 TPOT ms | P95 E2E ms | Peak VRAM MiB | Error rate | Status |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+        "| Profile | Runs | In/Out | C | SLO TTFT/TPOT ms | Goodput req/s | Output tok/s | P95 TTFT ms | P95 TPOT ms | P95 E2E ms | Peak VRAM MiB | Error rate | Evidence | SLO |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|",
     ]
     for row in aggregate_records(records):
         lines.append(
             "| {profile} | {runs} | {input_len}/{output_len} | {max_concurrency} | {slo} | "
             "{goodput} | {throughput} | {ttft} | {tpot} | {e2el} | {vram} | "
-            "{error_rate} | {status} |".format(
+            "{error_rate} | {evidence_status} | {slo_status} |".format(
                 profile=row["profile"],
                 runs=row["runs"],
                 input_len=row["input_len"],
@@ -350,7 +366,8 @@ def write_reports(
                 e2el=_format(row["p95_e2el_ms"]),
                 vram=_format(row["peak_memory_used_mib"], 0),
                 error_rate=_format(row["error_rate"] * 100, 2) + "%",
-                status=row["status"],
+                evidence_status=row["evidence_status"],
+                slo_status=row["slo_status"],
             )
         )
     markdown_path.write_text("\n".join(lines) + "\n", encoding="utf-8")

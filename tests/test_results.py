@@ -9,6 +9,7 @@ from pathlib import Path
 from qwen_serve_lab.results import (
     aggregate_records,
     load_records_from_manifests,
+    parse_vllm_result,
 )
 from qwen_serve_lab.cli import main
 
@@ -126,7 +127,8 @@ class ResultTests(unittest.TestCase):
             self.assertEqual(excluded_records, [])
             self.assertEqual(aggregates[0]["request_goodput"], 1.1)
             self.assertEqual(aggregates[0]["request_goodput_range"], (1.0, 1.2))
-            self.assertEqual(aggregates[0]["status"], "PASS")
+            self.assertEqual(aggregates[0]["evidence_status"], "VALID")
+            self.assertEqual(aggregates[0]["slo_status"], "PASS")
             self.assertEqual(aggregates[0]["peak_memory_used_mib"], 9003)
             self.assertEqual(exit_code, 0)
             self.assertTrue((report_dir / "runs.csv").is_file())
@@ -134,6 +136,27 @@ class ResultTests(unittest.TestCase):
                 "e01_baseline_short_c1",
                 (report_dir / "summary.md").read_text(),
             )
+
+    def test_slo_failure_is_separate_from_valid_evidence(self) -> None:
+        records = []
+        for repetition in range(1, 4):
+            result = sample_result(repetition, goodput=0.1)
+            result["p95_ttft_ms"] = 1200.0 if repetition == 3 else 900.0
+            with tempfile.TemporaryDirectory() as temp_dir:
+                result_path = Path(temp_dir) / "result.json"
+                result_path.write_text(json.dumps(result))
+                records.append(
+                    parse_vllm_result(
+                        result_path,
+                        Path(temp_dir) / "manifest.json",
+                        telemetry_summary={"peak_memory_used_mib": 9000},
+                    )
+                )
+
+        aggregate = aggregate_records(records)[0]
+
+        self.assertEqual(aggregate["evidence_status"], "VALID")
+        self.assertEqual(aggregate["slo_status"], "FAIL")
 
 
 if __name__ == "__main__":
