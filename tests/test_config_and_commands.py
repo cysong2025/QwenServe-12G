@@ -3,6 +3,8 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from qwen_serve_lab.commands import (
     build_benchmark_command,
@@ -16,6 +18,7 @@ from qwen_serve_lab.config import (
     ConfigError,
     ServeConfig,
 )
+from qwen_serve_lab.cli import _run_matrix
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -149,6 +152,43 @@ class BenchmarkConfigTests(unittest.TestCase):
         self.assertIn((128, 128, 1), shapes)
         self.assertIn((512, 256, 8), shapes)
         self.assertIn((2048, 256, 16), shapes)
+
+    def test_matrix_resume_skips_three_matching_valid_repetitions(self) -> None:
+        matrix_path = ROOT / "configs/matrix/baseline.toml"
+        config = BenchmarkMatrix.from_file(matrix_path).configs[0]
+        records = [
+            SimpleNamespace(
+                profile=config.profile_name,
+                benchmark_config_sha256=config.source_sha256,
+                server_config_sha256=config.server_config_sha256,
+                input_len=config.input_len,
+                output_len=config.output_len,
+                max_concurrency=config.max_concurrency,
+                completed=config.num_prompts,
+                failed=0,
+                valid=True,
+                repetition=repetition,
+            )
+            for repetition in range(1, config.repetitions + 1)
+        ]
+
+        with (
+            patch("qwen_serve_lab.cli.Path.is_dir", return_value=True),
+            patch(
+                "qwen_serve_lab.cli.load_records_from_manifests",
+                return_value=records,
+            ),
+            patch("qwen_serve_lab.cli._execute_benchmark") as execute,
+        ):
+            returncode = _run_matrix(
+                matrix_path,
+                [config.profile_name],
+                tokenizer_path=None,
+                skip_completed=True,
+            )
+
+        self.assertEqual(returncode, 0)
+        execute.assert_not_called()
 
 
 if __name__ == "__main__":

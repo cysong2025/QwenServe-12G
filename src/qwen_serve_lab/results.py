@@ -155,7 +155,9 @@ def _resolve_evidence_path(project_root: Path, raw_path: str) -> Path:
 
 
 def load_records_from_manifests(
-    manifest_dir: str | Path, profile_prefix: str | None = None
+    manifest_dir: str | Path,
+    profile_prefix: str | None = None,
+    benchmark_config_sha256: str | None = None,
 ) -> list[ResultRecord]:
     records: list[ResultRecord] = []
     for manifest_path in sorted(Path(manifest_dir).rglob("*.json")):
@@ -168,6 +170,12 @@ def load_records_from_manifests(
         profile = manifest.get("profile")
         if profile_prefix and (
             not isinstance(profile, str) or not profile.startswith(profile_prefix)
+        ):
+            continue
+        if (
+            benchmark_config_sha256 is not None
+            and manifest.get("benchmark_config_sha256")
+            != benchmark_config_sha256
         ):
             continue
         environment = manifest.get("environment")

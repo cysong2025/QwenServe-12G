@@ -21,6 +21,7 @@ from qwen_serve_lab.config import (
     BenchmarkMatrix,
     ConfigError,
     ServeConfig,
+    config_sha256,
 )
 from qwen_serve_lab.environment import (
     checks_as_dict,
@@ -81,6 +82,11 @@ def _parser() -> argparse.ArgumentParser:
     run_matrix.add_argument("config", type=Path)
     run_matrix.add_argument("--tokenizer-path", type=Path)
     run_matrix.add_argument(
+        "--skip-completed",
+        action="store_true",
+        help="Skip profiles with all valid repetitions for the same config hashes",
+    )
+    run_matrix.add_argument(
         "--only",
         action="append",
         default=[],
@@ -95,6 +101,11 @@ def _parser() -> argparse.ArgumentParser:
     )
     summarize.add_argument("--output-dir", type=Path, required=True)
     summarize.add_argument("--profile-prefix")
+    summarize.add_argument(
+        "--benchmark-config",
+        type=Path,
+        help="Include only manifests matching this config file's SHA-256",
+    )
     return parser
 
 
@@ -278,7 +289,10 @@ def _run_benchmark(config_path: Path, tokenizer_path: Path | None) -> int:
 
 
 def _run_matrix(
-    config_path: Path, selected: list[str], tokenizer_path: Path | None
+    config_path: Path,
+    selected: list[str],
+    tokenizer_path: Path | None,
+    skip_completed: bool,
 ) -> int:
     matrix = BenchmarkMatrix.from_file(config_path)
     configs = list(matrix.configs)
@@ -293,6 +307,32 @@ def _run_matrix(
         if unknown:
             raise ConfigError(f"Unknown matrix profile(s): {', '.join(unknown)}")
         configs = [config for config in configs if config.profile_name in selected_set]
+
+    if skip_completed and Path("artifacts/env").is_dir():
+        records = load_records_from_manifests("artifacts/env")
+        pending: list[BenchmarkConfig] = []
+        for config in configs:
+            repetitions = {
+                record.repetition
+                for record in records
+                if record.profile == config.profile_name
+                and record.benchmark_config_sha256 == config.source_sha256
+                and record.server_config_sha256 == config.server_config_sha256
+                and record.input_len == config.input_len
+                and record.output_len == config.output_len
+                and record.max_concurrency == config.max_concurrency
+                and record.completed + record.failed == config.num_prompts
+                and record.valid
+            }
+            expected = set(range(1, config.repetitions + 1))
+            if expected.issubset(repetitions):
+                print(
+                    f"Skipping completed matrix profile: {config.profile_name} "
+                    f"({config.repetitions}/{config.repetitions} valid repetitions)"
+                )
+            else:
+                pending.append(config)
+        configs = pending
 
     for index, config in enumerate(configs, start=1):
         print(f"Matrix profile {index}/{len(configs)}: {config.profile_name}")
@@ -346,10 +386,22 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"[{config.profile_name}] {render_shell_command(command)}")
             return 0
         if args.command == "run-matrix":
-            return _run_matrix(args.config, args.only, args.tokenizer_path)
+            return _run_matrix(
+                args.config,
+                args.only,
+                args.tokenizer_path,
+                args.skip_completed,
+            )
         if args.command == "summarize":
+            benchmark_hash = (
+                config_sha256(args.benchmark_config)
+                if args.benchmark_config is not None
+                else None
+            )
             records = load_records_from_manifests(
-                args.manifest_dir, profile_prefix=args.profile_prefix
+                args.manifest_dir,
+                profile_prefix=args.profile_prefix,
+                benchmark_config_sha256=benchmark_hash,
             )
             csv_path, markdown_path = write_reports(records, args.output_dir)
             print(csv_path)

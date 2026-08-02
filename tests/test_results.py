@@ -90,12 +90,23 @@ class ResultTests(unittest.TestCase):
                 )
             manifest = {
                 "profile": "e01_baseline_short_c1",
+                "benchmark_config_sha256": "a" * 64,
                 "environment": {"project_root": str(root)},
                 "runs": runs,
             }
             (env_dir / "manifest.json").write_text(json.dumps(manifest))
 
             records = load_records_from_manifests(env_dir, "e01_baseline")
+            filtered_records = load_records_from_manifests(
+                env_dir,
+                "e01_baseline",
+                benchmark_config_sha256="a" * 64,
+            )
+            excluded_records = load_records_from_manifests(
+                env_dir,
+                "e01_baseline",
+                benchmark_config_sha256="c" * 64,
+            )
             aggregates = aggregate_records(records)
             report_dir = root / "reports"
             exit_code = main(
@@ -111,6 +122,8 @@ class ResultTests(unittest.TestCase):
             )
 
             self.assertEqual(len(records), 3)
+            self.assertEqual(len(filtered_records), 3)
+            self.assertEqual(excluded_records, [])
             self.assertEqual(aggregates[0]["request_goodput"], 1.1)
             self.assertEqual(aggregates[0]["request_goodput_range"], (1.0, 1.2))
             self.assertEqual(aggregates[0]["status"], "PASS")

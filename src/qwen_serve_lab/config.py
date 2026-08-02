@@ -35,6 +35,10 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def config_sha256(path: str | Path) -> str:
+    return _sha256(Path(path).resolve())
+
+
 def _section(data: dict[str, Any], name: str) -> dict[str, Any]:
     value = data.get(name)
     if not isinstance(value, dict):

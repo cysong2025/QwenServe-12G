@@ -111,12 +111,12 @@ make bench-smoke
 ## 5. 单 Profile 稳定性
 
 ```bash
-qsl run-matrix configs/matrix/baseline.toml --only e01_baseline_short_c1
+make bench-baseline
 ```
 
 它会执行三次，每次 100 个请求，轮次间冷却 30 秒。检查三轮是否使用相同的 benchmark/server SHA-256，错误率是否低于 1%，温度和时钟是否出现明显漂移。
 
-然后生成临时报告：
+然后生成矩阵口径的临时报告：
 
 ```bash
 make summarize
@@ -137,6 +137,14 @@ make render-baseline-matrix | less
 ```bash
 make bench-baseline-matrix
 make summarize
+```
+
+`bench-baseline-matrix` 会检查已有 manifest，仅跳过相同 matrix SHA、相同 server SHA、请求数完整且 repetition 1–3 全部有效的 profile。旧配置、失败轮次或不完整轮次都会重新执行。`summarize` 只读取与 `configs/matrix/baseline.toml` 哈希一致的记录，避免 pilot 与正式矩阵混合。
+
+早期使用独立 `configs/bench/baseline_short_c1.toml` 产生的稳定性结果属于 pilot，可单独归档：
+
+```bash
+make summarize-pilot
 ```
 
 矩阵包含：

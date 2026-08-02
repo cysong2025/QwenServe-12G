@@ -25,6 +25,8 @@
 
 次要指标：ITL、requests/s、input tokens/s、output tokens/s、queue time、prefix cache hit rate、GPU utilization、温度和功耗。
 
+vLLM 输出的 `Peak concurrent requests` 按一秒时间桶统计：请求只要在该秒内活动过就会计入，顺序请求也可能落入同一桶，因此该值可能高于 `max_concurrency`。它只用于解释峰值 token 吞吐所在时间桶，不作为瞬时并发或负载约束的证据；实验并发以固定的 `max_concurrency` 和详细请求记录为准。
+
 ## 3. SLO 冻结
 
 M1 先执行 pilot，不评价优化优劣。根据交互式服务目标和 pilot 分布冻结 SLO，初始候选值为：

@@ -95,7 +95,7 @@ make bench-smoke
 smoke 通过后先执行一个正式 profile：
 
 ```bash
-qsl run-matrix configs/matrix/baseline.toml --only e01_baseline_short_c1
+make bench-baseline
 ```
 
 确认三次重复稳定后，再运行完整的 `3 workloads x 4 concurrencies x 3 repetitions` 基线矩阵并生成报告：
@@ -104,6 +104,8 @@ qsl run-matrix configs/matrix/baseline.toml --only e01_baseline_short_c1
 make bench-baseline-matrix
 make summarize
 ```
+
+矩阵执行会跳过相同配置哈希下已经完成三次有效重复的 profile，支持中断后安全续跑；正式汇总只读取与矩阵 TOML 哈希一致的 manifest。
 
 具体执行门槛和失败处理见 [M1 基线运行手册](docs/M1_BASELINE_RUNBOOK.md)。
 
