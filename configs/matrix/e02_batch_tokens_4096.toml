@@ -1,0 +1,44 @@
+[profile]
+name = "e02_batch_tokens_4096_matrix"
+server_profile = "e02_batch_tokens_4096_bf16"
+server_config = "../serve/e02_batch_tokens_4096.toml"
+
+[matrix]
+profile_prefix = "e02_bt4096"
+concurrencies = [4, 8]
+result_root = "artifacts/results/e02_batch_tokens/bt4096"
+
+[[workloads]]
+name = "short"
+input_len = 128
+output_len = 128
+
+[[workloads]]
+name = "medium"
+input_len = 512
+output_len = 256
+
+[[workloads]]
+name = "long"
+input_len = 2048
+output_len = 256
+
+[benchmark]
+model = "Qwen/Qwen2.5-3B-Instruct"
+served_model_name = "qwen2.5-3b-instruct"
+base_url = "http://127.0.0.1:8000"
+endpoint = "/v1/completions"
+dataset_name = "random"
+num_prompts = 100
+request_rate = "inf"
+burstiness = 1.0
+num_warmups = 10
+metric_percentiles = [50, 95, 99]
+goodput_ttft_ms = 1000
+goodput_tpot_ms = 50
+seed = 20260730
+temperature = 0.0
+ignore_eos = true
+repetitions = 3
+cooldown_seconds = 30
+ready_check_timeout_seconds = 60

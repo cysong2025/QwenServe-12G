@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,7 +20,7 @@ from qwen_serve_lab.config import (
     ConfigError,
     ServeConfig,
 )
-from qwen_serve_lab.cli import _run_matrix
+from qwen_serve_lab.cli import _run_matrix, _verify_active_server
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,6 +102,57 @@ class ServeConfigTests(unittest.TestCase):
             with self.assertRaises(ConfigError):
                 ServeConfig.from_file(path)
 
+    def test_e02_profiles_change_only_batch_token_budget(self) -> None:
+        budgets = (2048, 4096, 8192, 16384)
+        configs = [
+            ServeConfig.from_file(
+                ROOT / f"configs/serve/e02_batch_tokens_{budget}.toml"
+            )
+            for budget in budgets
+        ]
+
+        for config, budget in zip(configs, budgets, strict=True):
+            command = build_serve_command(config)
+            self.assertEqual(config.max_num_batched_tokens, budget)
+            self.assertTrue(config.enable_chunked_prefill)
+            self.assertIn("--enable-chunked-prefill", command)
+
+        controlled_fields = (
+            "model",
+            "revision",
+            "served_model_name",
+            "host",
+            "port",
+            "dtype",
+            "generation_config",
+            "max_model_len",
+            "gpu_memory_utilization",
+            "max_num_seqs",
+            "kv_cache_dtype",
+            "enable_prefix_caching",
+            "enable_per_request_metrics",
+            "wsl2_enable_pin_memory",
+            "use_flashinfer_sampler",
+            "enable_chunked_prefill",
+        )
+        reference = configs[0]
+        for config in configs[1:]:
+            for field in controlled_fields:
+                self.assertEqual(getattr(config, field), getattr(reference, field))
+
+    def test_small_batch_budget_requires_chunked_prefill(self) -> None:
+        config_text = (
+            ROOT / "configs/serve/e02_batch_tokens_2048.toml"
+        ).read_text()
+        config_text = config_text.replace(
+            "enable_chunked_prefill = true", "enable_chunked_prefill = false"
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "invalid.toml"
+            path.write_text(config_text)
+            with self.assertRaises(ConfigError):
+                ServeConfig.from_file(path)
+
 
 class BenchmarkConfigTests(unittest.TestCase):
     def test_smoke_command_records_slo_and_metadata(self) -> None:
@@ -153,6 +206,35 @@ class BenchmarkConfigTests(unittest.TestCase):
         self.assertIn((512, 256, 8), shapes)
         self.assertIn((2048, 256, 16), shapes)
 
+    def test_e02_matrices_expand_controlled_c4_c8_workloads(self) -> None:
+        for budget in (2048, 4096, 8192, 16384):
+            matrix = BenchmarkMatrix.from_file(
+                ROOT / f"configs/matrix/e02_batch_tokens_{budget}.toml"
+            )
+            shapes = {
+                (config.input_len, config.output_len, config.max_concurrency)
+                for config in matrix.configs
+            }
+
+            self.assertEqual(len(matrix.configs), 6)
+            self.assertEqual(
+                shapes,
+                {
+                    (128, 128, 4),
+                    (128, 128, 8),
+                    (512, 256, 4),
+                    (512, 256, 8),
+                    (2048, 256, 4),
+                    (2048, 256, 8),
+                },
+            )
+            self.assertTrue(
+                all(
+                    config.profile_name.startswith(f"e02_bt{budget}_")
+                    for config in matrix.configs
+                )
+            )
+
     def test_matrix_resume_skips_three_matching_valid_repetitions(self) -> None:
         matrix_path = ROOT / "configs/matrix/baseline.toml"
         config = BenchmarkMatrix.from_file(matrix_path).configs[0]
@@ -189,6 +271,26 @@ class BenchmarkConfigTests(unittest.TestCase):
 
         self.assertEqual(returncode, 0)
         execute.assert_not_called()
+
+    def test_benchmark_requires_matching_active_server(self) -> None:
+        config = BenchmarkMatrix.from_file(
+            ROOT / "configs/matrix/e02_batch_tokens_2048.toml"
+        ).configs[0]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            marker_path = Path(temp_dir) / "active.json"
+            marker = {
+                "profile": config.server_profile,
+                "server_config_sha256": config.server_config_sha256,
+                "pid": os.getpid(),
+            }
+            marker_path.write_text(json.dumps(marker))
+            with patch("qwen_serve_lab.cli.ACTIVE_SERVER_PATH", marker_path):
+                self.assertEqual(_verify_active_server(config), marker)
+
+                marker["profile"] = "wrong_profile"
+                marker_path.write_text(json.dumps(marker))
+                with self.assertRaises(ConfigError):
+                    _verify_active_server(config)
 
 
 if __name__ == "__main__":

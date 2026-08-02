@@ -18,7 +18,9 @@
 
 ## 当前状态
 
-当前完成 Stage 0 与 M1 的无 GPU 工程部分：项目章程、可行性分析、实验协议、环境自检、受控服务配置、基线负载矩阵、GPU 遥测和自动结果汇总。真实 G0/G1 数据仍需在目标 RTX 5070 上产生。
+Stage 0 和 M1 BF16 基线已在目标 RTX 5070 上完成：12 个 short/medium/long
+并发 profile 均有 3 次有效重复、完整 GPU 遥测和 SLO 判定。当前进入
+M2 E02 batch token budget 单变量实验。
 
 ```text
 docs/                 项目章程、可行性与实验协议
@@ -108,6 +110,9 @@ make summarize
 矩阵执行会跳过相同配置哈希下已经完成三次有效重复的 profile，支持中断后安全续跑；正式汇总只读取与矩阵 TOML 哈希一致的 manifest。
 
 具体执行门槛和失败处理见 [M1 基线运行手册](docs/M1_BASELINE_RUNBOOK.md)。
+
+E02 的 budget 切换、启动门槛和可恢复矩阵流程见
+[E02 Batch Token Budget 实验手册](docs/M2_E02_BATCH_TOKEN_RUNBOOK.md)。
 
 详细边界和验收标准见 [项目章程](docs/PROJECT_CHARTER.md)、[可行性分析](docs/FEASIBILITY.md) 与 [实验协议](docs/EXPERIMENT_PROTOCOL.md)。
 

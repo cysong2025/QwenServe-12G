@@ -52,6 +52,12 @@ def build_serve_command(config: ServeConfig) -> list[str]:
         if config.enable_prefix_caching
         else "--no-enable-prefix-caching"
     )
+    if config.enable_chunked_prefill is not None:
+        command.append(
+            "--enable-chunked-prefill"
+            if config.enable_chunked_prefill
+            else "--no-enable-chunked-prefill"
+        )
     if config.enable_per_request_metrics:
         command.append("--enable-per-request-metrics")
     return command

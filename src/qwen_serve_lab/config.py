@@ -62,6 +62,12 @@ def _positive_int(section: dict[str, Any], key: str) -> int:
     return value
 
 
+def _optional_bool(section: dict[str, Any], key: str) -> bool | None:
+    if key not in section:
+        return None
+    return _required(section, key, bool)
+
+
 @dataclass(frozen=True)
 class ServeConfig:
     profile_name: str
@@ -84,6 +90,7 @@ class ServeConfig:
     enable_per_request_metrics: bool
     wsl2_enable_pin_memory: bool
     use_flashinfer_sampler: bool
+    enable_chunked_prefill: bool | None = None
     local_model_path: Path | None = None
     local_model_manifest_sha256: str | None = None
 
@@ -105,6 +112,15 @@ class ServeConfig:
 
         max_model_len = _positive_int(server, "max_model_len")
         max_num_batched_tokens = _positive_int(server, "max_num_batched_tokens")
+        enable_chunked_prefill = _optional_bool(server, "enable_chunked_prefill")
+        if (
+            max_num_batched_tokens < max_model_len
+            and enable_chunked_prefill is not True
+        ):
+            raise ConfigError(
+                "max_num_batched_tokens below max_model_len requires "
+                "enable_chunked_prefill=true"
+            )
         if max_num_batched_tokens > max_model_len * _positive_int(
             server, "max_num_seqs"
         ):
@@ -141,6 +157,7 @@ class ServeConfig:
             use_flashinfer_sampler=_required(
                 server, "use_flashinfer_sampler", bool
             ),
+            enable_chunked_prefill=enable_chunked_prefill,
         )
 
     def with_local_model(self, path: str | Path) -> "ServeConfig":

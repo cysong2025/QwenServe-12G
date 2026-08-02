@@ -37,6 +37,9 @@ from qwen_serve_lab.results import (
 )
 
 
+ACTIVE_SERVER_PATH = Path("artifacts/server/active.json")
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="qsl")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -143,6 +146,62 @@ def _load_serve_config(config_path: Path, model_path: Path | None) -> ServeConfi
     return config
 
 
+def _write_active_server(config: ServeConfig, pid: int) -> dict[str, object]:
+    marker = {
+        "schema_version": 1,
+        "profile": config.profile_name,
+        "server_config": str(config.source_path),
+        "server_config_sha256": config.source_sha256,
+        "pid": pid,
+        "started_at": datetime.now(timezone.utc).isoformat(),
+    }
+    write_json(marker, ACTIVE_SERVER_PATH)
+    return marker
+
+
+def _clear_active_server(pid: int) -> None:
+    try:
+        marker = json.loads(ACTIVE_SERVER_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    if isinstance(marker, dict) and marker.get("pid") == pid:
+        ACTIVE_SERVER_PATH.unlink(missing_ok=True)
+
+
+def _verify_active_server(config: BenchmarkConfig) -> dict[str, object]:
+    try:
+        marker = json.loads(ACTIVE_SERVER_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ConfigError(
+            "No valid controlled server marker; start the matching server with "
+            "a make serve-* target"
+        ) from exc
+    if not isinstance(marker, dict):
+        raise ConfigError("Controlled server marker must contain a JSON object")
+
+    expected = (config.server_profile, config.server_config_sha256)
+    actual = (marker.get("profile"), marker.get("server_config_sha256"))
+    if actual != expected:
+        raise ConfigError(
+            "Active server does not match benchmark config: "
+            f"expected {expected[0]} ({expected[1]}), "
+            f"found {actual[0]} ({actual[1]})"
+        )
+
+    pid = marker.get("pid")
+    if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
+        raise ConfigError("Controlled server marker contains an invalid pid")
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError as exc:
+        raise ConfigError(
+            f"Controlled server marker is stale; process {pid} is not running"
+        ) from exc
+    except PermissionError:
+        pass
+    return marker
+
+
 def _run_server(config_path: Path, model_path: Path | None = None) -> int:
     config = _load_serve_config(config_path, model_path)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -185,6 +244,7 @@ def _run_server(config_path: Path, model_path: Path | None = None) -> int:
                 bufsize=1,
                 env=process_environment,
             )
+            _write_active_server(config, process.pid)
             if process.stdout is not None:
                 for line in process.stdout:
                     print(line, end="")
@@ -205,6 +265,9 @@ def _run_server(config_path: Path, model_path: Path | None = None) -> int:
     except OSError as exc:
         returncode = 127
         manifest["execution_error"] = str(exc)
+    finally:
+        if process is not None:
+            _clear_active_server(process.pid)
 
     manifest["returncode"] = returncode
     write_json(manifest, manifest_path)
@@ -212,6 +275,7 @@ def _run_server(config_path: Path, model_path: Path | None = None) -> int:
 
 
 def _execute_benchmark(config: BenchmarkConfig) -> int:
+    active_server = _verify_active_server(config)
     config.result_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     commands = [
@@ -225,6 +289,7 @@ def _execute_benchmark(config: BenchmarkConfig) -> int:
         "benchmark_config_sha256": config.source_sha256,
         "server_config": str(config.server_config_path),
         "server_config_sha256": config.server_config_sha256,
+        "active_server": active_server,
         "effective_config": _effective_config(config),
         "environment": collect_environment(),
         "commands": [render_shell_command(command) for command in commands],
