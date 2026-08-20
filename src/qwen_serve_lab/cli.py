@@ -16,6 +16,7 @@ from qwen_serve_lab.commands import (
     build_serve_environment,
     render_shell_command,
 )
+from qwen_serve_lab.comparison import write_e02_comparison
 from qwen_serve_lab.config import (
     BenchmarkConfig,
     BenchmarkMatrix,
@@ -109,6 +110,18 @@ def _parser() -> argparse.ArgumentParser:
         type=Path,
         help="Include only manifests matching this config file's SHA-256",
     )
+    compare_e02 = subparsers.add_parser(
+        "compare-e02", help="Compare E02 budgets from a summarized runs CSV"
+    )
+    compare_e02.add_argument(
+        "--runs-csv",
+        type=Path,
+        default=Path("reports/e02_batch_tokens/runs.csv"),
+    )
+    compare_e02.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e02_batch_tokens")
+    )
+    compare_e02.add_argument("--reference-budget", type=int, default=8192)
     return parser
 
 
@@ -469,6 +482,15 @@ def main(argv: list[str] | None = None) -> int:
                 benchmark_config_sha256=benchmark_hash,
             )
             csv_path, markdown_path = write_reports(records, args.output_dir)
+            print(csv_path)
+            print(markdown_path)
+            return 0
+        if args.command == "compare-e02":
+            csv_path, markdown_path = write_e02_comparison(
+                args.runs_csv,
+                args.output_dir,
+                reference_budget=args.reference_budget,
+            )
             print(csv_path)
             print(markdown_path)
             return 0

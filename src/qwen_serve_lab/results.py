@@ -78,6 +78,7 @@ class ResultRecord:
     mean_gpu_utilization_percent: float | None
     max_temperature_c: float | None
     mean_power_draw_w: float | None
+    mean_sm_clock_mhz: float | None
     valid: bool
 
 
@@ -142,6 +143,7 @@ def parse_vllm_result(
         ),
         max_temperature_c=telemetry.get("max_temperature_c"),
         mean_power_draw_w=telemetry.get("mean_power_draw_w"),
+        mean_sm_clock_mhz=telemetry.get("mean_sm_clock_mhz"),
         valid=error_rate < 0.01,
     )
     if record.input_len <= 0 or record.output_len <= 0:

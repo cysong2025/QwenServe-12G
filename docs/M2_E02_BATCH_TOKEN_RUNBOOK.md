@@ -100,8 +100,15 @@ engine core initialization failure 或显存分配失败：
 
 ```bash
 make summarize-e02
+make compare-e02
 sed -n '1,260p' reports/e02_batch_tokens/summary.md
+sed -n '1,320p' reports/e02_batch_tokens/comparison.md
 ```
+
+`summarize-e02` 从 manifest、原始 JSON 和 telemetry CSV 重建逐轮 `runs.csv`，
+其中包含平均 SM 时钟。`compare-e02` 以 8192 为参照，自动生成各 budget 的
+throughput、TTFT、TPOT、goodput 和峰值显存差值。若温度、功耗或 SM 时钟
+存在显著批次差异，报告会显式标记潜在混杂因素。
 
 E02 退出条件：
 

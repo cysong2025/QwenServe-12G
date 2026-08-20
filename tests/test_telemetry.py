@@ -35,6 +35,7 @@ class TelemetryTests(unittest.TestCase):
         self.assertGreaterEqual(summary["sample_count"], 1)
         self.assertEqual(summary["peak_memory_used_mib"], 9000)
         self.assertEqual(summary["mean_gpu_utilization_percent"], 75)
+        self.assertEqual(summary["mean_sm_clock_mhz"], 2700)
 
 
 if __name__ == "__main__":
