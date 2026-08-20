@@ -68,6 +68,19 @@ def _optional_bool(section: dict[str, Any], key: str) -> bool | None:
     return _required(section, key, bool)
 
 
+def _optional_positive_int(section: dict[str, Any], key: str) -> int | None:
+    if key not in section:
+        return None
+    return _positive_int(section, key)
+
+
+def _nonnegative_int(section: dict[str, Any], key: str, default: int = 0) -> int:
+    value = section.get(key, default)
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ConfigError(f"{key} must be a non-negative integer")
+    return value
+
+
 @dataclass(frozen=True)
 class ServeConfig:
     profile_name: str
@@ -222,6 +235,12 @@ class BenchmarkConfig:
     cooldown_seconds: int
     ready_check_timeout_seconds: int
     result_dir: Path
+    server_prefix_caching_enabled: bool
+    prefix_len: int | None = None
+    suffix_len: int | None = None
+    num_prefixes: int | None = None
+    repetition_seed_stride: int = 0
+    prewarm_prompts: int = 0
     local_tokenizer_path: Path | None = None
     local_tokenizer_manifest_sha256: str | None = None
 
@@ -245,6 +264,10 @@ class BenchmarkConfig:
         server_config_path = (source_path.parent / server_config_raw).resolve()
         if not server_config_path.is_file():
             raise ConfigError(f"Server config does not exist: {server_config_path}")
+        server = _section(_load_toml(server_config_path), "server")
+        server_prefix_caching_enabled = _required(
+            server, "enable_prefix_caching", bool
+        )
 
         request_rate_raw = benchmark.get("request_rate")
         if request_rate_raw == "inf":
@@ -306,6 +329,56 @@ class BenchmarkConfig:
                 "ready_check_timeout_seconds must be a non-negative integer"
             )
 
+        dataset_name = _required(benchmark, "dataset_name", str)
+        input_len = _positive_int(benchmark, "input_len")
+        output_len = _positive_int(benchmark, "output_len")
+        num_prompts = _positive_int(benchmark, "num_prompts")
+        prefix_len = _optional_positive_int(benchmark, "prefix_len")
+        suffix_len = _optional_positive_int(benchmark, "suffix_len")
+        num_prefixes = _optional_positive_int(benchmark, "num_prefixes")
+        repetition_seed_stride = _nonnegative_int(
+            benchmark, "repetition_seed_stride"
+        )
+        prewarm_prompts = _nonnegative_int(benchmark, "prewarm_prompts")
+
+        prefix_fields = (prefix_len, suffix_len, num_prefixes)
+        if dataset_name == "prefix_repetition":
+            if any(value is None for value in prefix_fields):
+                raise ConfigError(
+                    "prefix_repetition requires prefix_len, suffix_len, and "
+                    "num_prefixes"
+                )
+            assert prefix_len is not None
+            assert suffix_len is not None
+            assert num_prefixes is not None
+            if input_len != prefix_len + suffix_len:
+                raise ConfigError(
+                    "input_len must equal prefix_len + suffix_len for "
+                    "prefix_repetition"
+                )
+            if num_prefixes > num_prompts or num_prompts % num_prefixes != 0:
+                raise ConfigError(
+                    "num_prefixes must divide num_prompts and cannot exceed it"
+                )
+            if num_warmups != 0:
+                raise ConfigError(
+                    "prefix_repetition must use num_warmups=0; use isolated "
+                    "prewarm_prompts instead"
+                )
+            if prewarm_prompts <= 0:
+                raise ConfigError(
+                    "prefix_repetition requires positive prewarm_prompts"
+                )
+            if repetition_seed_stride <= 0:
+                raise ConfigError(
+                    "prefix_repetition requires a positive repetition_seed_stride"
+                )
+        elif any(value is not None for value in prefix_fields):
+            raise ConfigError(
+                "prefix_len, suffix_len, and num_prefixes require "
+                "dataset_name='prefix_repetition'"
+            )
+
         return cls(
             profile_name=_required(profile, "name", str),
             server_profile=_required(profile, "server_profile", str),
@@ -317,10 +390,10 @@ class BenchmarkConfig:
             served_model_name=_required(benchmark, "served_model_name", str),
             base_url=_required(benchmark, "base_url", str).rstrip("/"),
             endpoint=_required(benchmark, "endpoint", str),
-            dataset_name=_required(benchmark, "dataset_name", str),
-            input_len=_positive_int(benchmark, "input_len"),
-            output_len=_positive_int(benchmark, "output_len"),
-            num_prompts=_positive_int(benchmark, "num_prompts"),
+            dataset_name=dataset_name,
+            input_len=input_len,
+            output_len=output_len,
+            num_prompts=num_prompts,
             request_rate=request_rate,
             burstiness=burstiness,
             max_concurrency=_positive_int(benchmark, "max_concurrency"),
@@ -335,7 +408,29 @@ class BenchmarkConfig:
             cooldown_seconds=cooldown_seconds,
             ready_check_timeout_seconds=ready_check_timeout_seconds,
             result_dir=Path(result_dir),
+            server_prefix_caching_enabled=server_prefix_caching_enabled,
+            prefix_len=prefix_len,
+            suffix_len=suffix_len,
+            num_prefixes=num_prefixes,
+            repetition_seed_stride=repetition_seed_stride,
+            prewarm_prompts=prewarm_prompts,
         )
+
+    def seed_for_repetition(self, repetition: int) -> int:
+        if repetition <= 0 or repetition > self.repetitions:
+            raise ConfigError(
+                f"repetition must be in [1, {self.repetitions}]"
+            )
+        return self.seed + (repetition - 1) * self.repetition_seed_stride
+
+    def prewarm_seed_for_repetition(self, repetition: int) -> int:
+        return self.seed_for_repetition(repetition) + 1_000_000_000
+
+    @property
+    def nominal_reuse_percent(self) -> float | None:
+        if self.num_prefixes is None:
+            return None
+        return (self.num_prompts - self.num_prefixes) / self.num_prompts * 100
 
     def with_local_tokenizer(self, path: str | Path) -> "BenchmarkConfig":
         tokenizer_path = Path(path).expanduser().resolve()
@@ -402,6 +497,12 @@ class BenchmarkMatrix:
             workload_name = _required(workload, "name", str)
             input_len = _positive_int(workload, "input_len")
             output_len = _positive_int(workload, "output_len")
+            workload_overrides = {
+                key: workload[key]
+                for key in ("prefix_len", "suffix_len", "num_prefixes")
+                if key in workload
+            }
+            seed_offset = _nonnegative_int(workload, "seed_offset")
             for concurrency in concurrencies:
                 effective_name = f"{profile_prefix}_{workload_name}_c{concurrency}"
                 if effective_name in seen_names:
@@ -414,8 +515,10 @@ class BenchmarkMatrix:
                 }
                 effective_benchmark = {
                     **common,
+                    **workload_overrides,
                     "input_len": input_len,
                     "output_len": output_len,
+                    "seed": _positive_int(common, "seed") + seed_offset,
                     "max_concurrency": concurrency,
                     "result_dir": f"{result_root}/{effective_name}",
                 }
@@ -431,6 +534,10 @@ class BenchmarkMatrix:
                 "input_len": config.input_len,
                 "output_len": config.output_len,
                 "max_concurrency": config.max_concurrency,
+                "prefix_len": config.prefix_len,
+                "suffix_len": config.suffix_len,
+                "num_prefixes": config.num_prefixes,
+                "seed": config.seed,
             }
             for config in configs
         ]

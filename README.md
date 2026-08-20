@@ -20,8 +20,9 @@
 
 Stage 0、M1 BF16 基线和 M2 E02 batch token budget 实验已在目标
 RTX 5070 上完成。E02 包含 4 个 budget、6 种负载形状和 72 次有效
-benchmark，并已生成可重建的差值和运行状态报告。当前准备进入 E04
-prefix reuse sweep。
+benchmark，并已生成可重建的差值和运行状态报告。E04 prefix reuse
+sweep 的配对矩阵、缓存命中率证据采集和输出一致性校验已经实现，等待在目标 GPU
+执行正式实验。
 
 ```text
 docs/                 项目章程、可行性与实验协议
@@ -116,6 +117,9 @@ E02 的 budget 切换、启动门槛和可恢复矩阵流程见
 [E02 Batch Token Budget 实验手册](docs/M2_E02_BATCH_TOKEN_RUNBOOK.md)。
 完整数据解读、有效性限制和可复现结论见
 [E02 实验结果](docs/E02_RESULTS.md)。
+
+E04 的 OFF/ON 配对、缓存隔离、实际 token 命中率采集和正式矩阵步骤见
+[E04 Automatic Prefix Caching 实验手册](docs/M2_E04_PREFIX_CACHE_RUNBOOK.md)。
 
 详细边界和验收标准见 [项目章程](docs/PROJECT_CHARTER.md)、[可行性分析](docs/FEASIBILITY.md) 与 [实验协议](docs/EXPERIMENT_PROTOCOL.md)。
 

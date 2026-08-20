@@ -12,11 +12,13 @@ from pathlib import Path
 
 from qwen_serve_lab.commands import (
     build_benchmark_command,
+    build_prewarm_command,
     build_serve_command,
     build_serve_environment,
     render_shell_command,
 )
 from qwen_serve_lab.comparison import write_e02_comparison
+from qwen_serve_lab.e04 import write_e04_comparison
 from qwen_serve_lab.config import (
     BenchmarkConfig,
     BenchmarkMatrix,
@@ -31,8 +33,15 @@ from qwen_serve_lab.environment import (
     write_json,
 )
 from qwen_serve_lab.telemetry import NvidiaSmiSampler, summarize_telemetry
+from qwen_serve_lab.prometheus import (
+    MetricsError,
+    fetch_metrics,
+    prefix_delta,
+    prefix_snapshot,
+)
 from qwen_serve_lab.results import (
     ResultError,
+    generated_texts_sha256,
     load_records_from_manifests,
     write_reports,
 )
@@ -122,6 +131,17 @@ def _parser() -> argparse.ArgumentParser:
         "--output-dir", type=Path, default=Path("reports/e02_batch_tokens")
     )
     compare_e02.add_argument("--reference-budget", type=int, default=8192)
+    compare_e04 = subparsers.add_parser(
+        "compare-e04", help="Compare paired E04 prefix-cache OFF/ON runs"
+    )
+    compare_e04.add_argument(
+        "--runs-csv",
+        type=Path,
+        default=Path("reports/e04_prefix_cache/runs.csv"),
+    )
+    compare_e04.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e04_prefix_cache")
+    )
     return parser
 
 
@@ -295,6 +315,10 @@ def _execute_benchmark(config: BenchmarkConfig) -> int:
         build_benchmark_command(config, repetition=index)
         for index in range(1, config.repetitions + 1)
     ]
+    prewarm_commands = [
+        build_prewarm_command(config, repetition=index)
+        for index in range(1, config.repetitions + 1)
+    ]
     manifest = {
         "schema_version": 1,
         "profile": config.profile_name,
@@ -306,14 +330,76 @@ def _execute_benchmark(config: BenchmarkConfig) -> int:
         "effective_config": _effective_config(config),
         "environment": collect_environment(),
         "commands": [render_shell_command(command) for command in commands],
+        "prewarm_commands": [
+            render_shell_command(command) if command is not None else None
+            for command in prewarm_commands
+        ],
         "runs": [],
     }
     manifest_path = Path("artifacts/env") / f"{timestamp}-{config.profile_name}.json"
     write_json(manifest, manifest_path)
     print(f"Environment manifest: {manifest_path}")
 
-    for index, command in enumerate(commands, start=1):
+    for index, (prewarm_command, command) in enumerate(
+        zip(prewarm_commands, commands, strict=True), start=1
+    ):
         print(f"Running repetition {index}/{config.repetitions}")
+        prewarm_returncode = None
+        prewarm_execution_error = None
+        if prewarm_command is not None:
+            print("Running isolated prewarm workload")
+            print(render_shell_command(prewarm_command))
+            try:
+                prewarm_completed = subprocess.run(prewarm_command, check=False)
+            except OSError as exc:
+                prewarm_execution_error = str(exc)
+                prewarm_completed = subprocess.CompletedProcess(prewarm_command, 127)
+            prewarm_returncode = prewarm_completed.returncode
+            if prewarm_returncode != 0:
+                run_record = {
+                    "repetition": index,
+                    "effective_seed": config.seed_for_repetition(index),
+                    "returncode": prewarm_returncode,
+                    "execution_error": prewarm_execution_error,
+                    "failed_stage": "prewarm",
+                    "prewarm_returncode": prewarm_returncode,
+                    "result_files": [],
+                }
+                manifest["runs"].append(run_record)
+                write_json(manifest, manifest_path)
+                print(
+                    f"Prewarm for repetition {index} failed with exit code "
+                    f"{prewarm_returncode}",
+                    file=sys.stderr,
+                )
+                return prewarm_returncode
+
+        metrics_before = None
+        metrics_before_path = None
+        if config.dataset_name == "prefix_repetition":
+            metrics_before_path = (
+                config.result_dir
+                / f"metrics-before-{config.profile_name}-r{index}-{timestamp}.prom"
+            )
+            try:
+                metrics_text = fetch_metrics(config.base_url)
+                metrics_before_path.write_text(metrics_text, encoding="utf-8")
+                metrics_before = prefix_snapshot(metrics_text)
+            except (MetricsError, OSError) as exc:
+                run_record = {
+                    "repetition": index,
+                    "effective_seed": config.seed_for_repetition(index),
+                    "returncode": 2,
+                    "execution_error": str(exc),
+                    "failed_stage": "metrics_before",
+                    "prewarm_returncode": prewarm_returncode,
+                    "result_files": [],
+                }
+                manifest["runs"].append(run_record)
+                write_json(manifest, manifest_path)
+                print(str(exc), file=sys.stderr)
+                return 2
+
         print(render_shell_command(command))
         telemetry_path = (
             config.result_dir
@@ -329,13 +415,64 @@ def _execute_benchmark(config: BenchmarkConfig) -> int:
                 completed = subprocess.CompletedProcess(command, 127)
         result_files_after = set(config.result_dir.glob("*.json"))
         new_result_files = sorted(result_files_after - result_files_before)
+        evidence_error = None
+        prefix_metrics = None
+        metrics_after_path = None
+        if config.dataset_name == "prefix_repetition":
+            metrics_after_path = (
+                config.result_dir
+                / f"metrics-after-{config.profile_name}-r{index}-{timestamp}.prom"
+            )
+            try:
+                metrics_text = fetch_metrics(config.base_url)
+                metrics_after_path.write_text(metrics_text, encoding="utf-8")
+                metrics_after = prefix_snapshot(metrics_text)
+                assert metrics_before is not None
+                prefix_metrics = prefix_delta(metrics_before, metrics_after)
+                if config.server_prefix_caching_enabled and not (
+                    isinstance(prefix_metrics.get("query_tokens"), (int, float))
+                    and prefix_metrics["query_tokens"] > 0
+                    and isinstance(prefix_metrics.get("hit_tokens"), (int, float))
+                ):
+                    raise MetricsError(
+                        "Prefix caching is enabled but token counters are unavailable"
+                    )
+            except (MetricsError, OSError) as exc:
+                evidence_error = str(exc)
+
+        output_hash = None
+        if completed.returncode == 0 and len(new_result_files) == 1:
+            try:
+                output_hash = generated_texts_sha256(new_result_files[0])
+            except ResultError as exc:
+                if config.dataset_name == "prefix_repetition":
+                    evidence_error = str(exc)
+        elif (
+            completed.returncode == 0
+            and config.dataset_name == "prefix_repetition"
+        ):
+            evidence_error = (
+                "A successful prefix benchmark must create exactly one result "
+                f"file; found {len(new_result_files)}"
+            )
         run_record = {
             "repetition": index,
+            "effective_seed": config.seed_for_repetition(index),
             "returncode": completed.returncode,
             "execution_error": execution_error,
+            "evidence_error": evidence_error,
+            "prewarm_returncode": prewarm_returncode,
             "telemetry": str(telemetry_path),
             "telemetry_summary": summarize_telemetry(telemetry_path),
             "result_files": [str(path) for path in new_result_files],
+            "metrics_before": (
+                str(metrics_before_path) if metrics_before_path is not None else None
+            ),
+            "metrics_after": (
+                str(metrics_after_path) if metrics_after_path is not None else None
+            ),
+            "prefix_metrics": prefix_metrics,
+            "generated_texts_sha256": output_hash,
         }
         manifest["runs"].append(run_record)
         write_json(manifest, manifest_path)
@@ -346,6 +483,13 @@ def _execute_benchmark(config: BenchmarkConfig) -> int:
                 file=sys.stderr,
             )
             return completed.returncode
+        if evidence_error is not None:
+            print(
+                f"Evidence collection for repetition {index} failed: "
+                f"{evidence_error}",
+                file=sys.stderr,
+            )
+            return 2
         if index < config.repetitions and config.cooldown_seconds:
             time.sleep(config.cooldown_seconds)
     return 0
@@ -494,7 +638,15 @@ def main(argv: list[str] | None = None) -> int:
             print(csv_path)
             print(markdown_path)
             return 0
-    except (ConfigError, ResultError) as exc:
+        if args.command == "compare-e04":
+            csv_path, markdown_path = write_e04_comparison(
+                args.runs_csv,
+                args.output_dir,
+            )
+            print(csv_path)
+            print(markdown_path)
+            return 0
+    except (ConfigError, MetricsError, ResultError) as exc:
         print(f"Configuration error: {exc}", file=sys.stderr)
         return 2
     return 2

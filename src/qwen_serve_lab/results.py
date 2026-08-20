@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import statistics
 from dataclasses import asdict, dataclass
@@ -46,6 +47,49 @@ def _metadata_number(data: dict[str, Any], key: str) -> float:
     return _number(data, key)
 
 
+def _optional_metadata_number(data: dict[str, Any], key: str) -> float | None:
+    if key not in data:
+        return None
+    return _metadata_number(data, key)
+
+
+def _optional_metadata_integer(data: dict[str, Any], key: str) -> int | None:
+    value = _optional_metadata_number(data, key)
+    if value is None:
+        return None
+    if not value.is_integer():
+        raise ResultError(f"Result metadata {key!r} must be an integer")
+    return int(value)
+
+
+def _optional_metadata_bool(data: dict[str, Any], key: str) -> bool | None:
+    value = data.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str) and value.lower() in {"true", "false"}:
+        return value.lower() == "true"
+    raise ResultError(f"Result metadata {key!r} must be a boolean")
+
+
+def generated_texts_sha256(result_path: str | Path) -> str:
+    path = Path(result_path)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ResultError(f"Cannot read vLLM result {path}: {exc}") from exc
+    generated_texts = data.get("generated_texts") if isinstance(data, dict) else None
+    if not isinstance(generated_texts, list) or not all(
+        isinstance(text, str) for text in generated_texts
+    ):
+        raise ResultError(f"Detailed generated_texts are missing from {path}")
+    payload = json.dumps(
+        sorted(generated_texts), ensure_ascii=False, separators=(",", ":")
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 @dataclass(frozen=True)
 class ResultRecord:
     manifest: str
@@ -80,12 +124,23 @@ class ResultRecord:
     mean_power_draw_w: float | None
     mean_sm_clock_mhz: float | None
     valid: bool
+    effective_seed: int | None = None
+    prefix_cache_enabled: bool | None = None
+    prefix_len: int | None = None
+    suffix_len: int | None = None
+    num_prefixes: int | None = None
+    nominal_reuse_percent: float | None = None
+    prefix_cache_query_tokens: float | None = None
+    prefix_cache_hit_tokens: float | None = None
+    prefix_cache_hit_rate_percent: float | None = None
+    generated_texts_sha256: str | None = None
 
 
 def parse_vllm_result(
     result_path: str | Path,
     manifest_path: str | Path,
     telemetry_summary: dict[str, Any] | None = None,
+    run_evidence: dict[str, Any] | None = None,
 ) -> ResultRecord:
     path = Path(result_path)
     try:
@@ -102,6 +157,25 @@ def parse_vllm_result(
         raise ResultError(f"No requests recorded in {path}")
     error_rate = failed / total_requests
     telemetry = telemetry_summary or {}
+    evidence = run_evidence or {}
+    prefix_metrics = evidence.get("prefix_metrics")
+    if not isinstance(prefix_metrics, dict):
+        prefix_metrics = {}
+    prefix_cache_enabled = _optional_metadata_bool(data, "prefix_cache_enabled")
+    generated_hash = evidence.get("generated_texts_sha256")
+    if not isinstance(generated_hash, str):
+        generated_hash = None
+    prefix_evidence_valid = True
+    if prefix_cache_enabled is not None:
+        prefix_evidence_valid = bool(prefix_metrics.get("captured")) and bool(
+            generated_hash
+        )
+        if prefix_cache_enabled:
+            prefix_evidence_valid = prefix_evidence_valid and (
+                isinstance(prefix_metrics.get("query_tokens"), (int, float))
+                and prefix_metrics["query_tokens"] > 0
+                and isinstance(prefix_metrics.get("hit_tokens"), (int, float))
+            )
     repetition_raw = _string(data, "repetition")
     try:
         repetition = int(repetition_raw)
@@ -144,7 +218,19 @@ def parse_vllm_result(
         max_temperature_c=telemetry.get("max_temperature_c"),
         mean_power_draw_w=telemetry.get("mean_power_draw_w"),
         mean_sm_clock_mhz=telemetry.get("mean_sm_clock_mhz"),
-        valid=error_rate < 0.01,
+        valid=error_rate < 0.01 and prefix_evidence_valid,
+        effective_seed=_optional_metadata_integer(data, "effective_seed"),
+        prefix_cache_enabled=prefix_cache_enabled,
+        prefix_len=_optional_metadata_integer(data, "prefix_len"),
+        suffix_len=_optional_metadata_integer(data, "suffix_len"),
+        num_prefixes=_optional_metadata_integer(data, "num_prefixes"),
+        nominal_reuse_percent=_optional_metadata_number(
+            data, "nominal_reuse_percent"
+        ),
+        prefix_cache_query_tokens=prefix_metrics.get("query_tokens"),
+        prefix_cache_hit_tokens=prefix_metrics.get("hit_tokens"),
+        prefix_cache_hit_rate_percent=prefix_metrics.get("hit_rate_percent"),
+        generated_texts_sha256=generated_hash,
     )
     if record.input_len <= 0 or record.output_len <= 0:
         raise ResultError(f"Invalid workload lengths in {path}")
@@ -207,6 +293,7 @@ def load_records_from_manifests(
                     result_path,
                     manifest_path,
                     telemetry_summary=telemetry_summary,
+                    run_evidence=run,
                 )
             )
     return records

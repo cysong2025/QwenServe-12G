@@ -67,6 +67,28 @@ def build_benchmark_command(
     config: BenchmarkConfig, repetition: int = 1
 ) -> list[str]:
     request_rate = "inf" if math.isinf(config.request_rate) else str(config.request_rate)
+    effective_seed = config.seed_for_repetition(repetition)
+    metadata = [
+        f"profile={config.profile_name}",
+        f"server_profile={config.server_profile}",
+        f"repetition={repetition}",
+        f"effective_seed={effective_seed}",
+        f"input_len={config.input_len}",
+        f"output_len={config.output_len}",
+        f"slo_ttft_ms={config.goodput_ttft_ms:g}",
+        f"slo_tpot_ms={config.goodput_tpot_ms:g}",
+        f"benchmark_config_sha256={config.source_sha256}",
+        f"server_config_sha256={config.server_config_sha256}",
+    ]
+    if config.dataset_name == "prefix_repetition":
+        metadata.extend([
+            f"prefix_len={config.prefix_len}",
+            f"suffix_len={config.suffix_len}",
+            f"num_prefixes={config.num_prefixes}",
+            f"nominal_reuse_percent={config.nominal_reuse_percent:g}",
+            "prefix_cache_enabled="
+            + str(config.server_prefix_caching_enabled).lower(),
+        ])
     command = [
         "vllm",
         "bench",
@@ -87,10 +109,29 @@ def build_benchmark_command(
         config.served_model_name,
         "--dataset-name",
         config.dataset_name,
-        "--input-len",
-        str(config.input_len),
-        "--output-len",
-        str(config.output_len),
+    ])
+    if config.dataset_name == "prefix_repetition":
+        assert config.prefix_len is not None
+        assert config.suffix_len is not None
+        assert config.num_prefixes is not None
+        command.extend([
+            "--prefix-repetition-prefix-len",
+            str(config.prefix_len),
+            "--prefix-repetition-suffix-len",
+            str(config.suffix_len),
+            "--prefix-repetition-num-prefixes",
+            str(config.num_prefixes),
+            "--prefix-repetition-output-len",
+            str(config.output_len),
+        ])
+    else:
+        command.extend([
+            "--input-len",
+            str(config.input_len),
+            "--output-len",
+            str(config.output_len),
+        ])
+    command.extend([
         "--num-prompts",
         str(config.num_prompts),
         "--request-rate",
@@ -104,7 +145,7 @@ def build_benchmark_command(
         "--ready-check-timeout-sec",
         str(config.ready_check_timeout_seconds),
         "--seed",
-        str(config.seed),
+        str(effective_seed),
         "--temperature",
         f"{config.temperature:g}",
         "--percentile-metrics",
@@ -115,15 +156,7 @@ def build_benchmark_command(
         f"ttft:{config.goodput_ttft_ms:g}",
         f"tpot:{config.goodput_tpot_ms:g}",
         "--metadata",
-        f"profile={config.profile_name}",
-        f"server_profile={config.server_profile}",
-        f"repetition={repetition}",
-        f"input_len={config.input_len}",
-        f"output_len={config.output_len}",
-        f"slo_ttft_ms={config.goodput_ttft_ms:g}",
-        f"slo_tpot_ms={config.goodput_tpot_ms:g}",
-        f"benchmark_config_sha256={config.source_sha256}",
-        f"server_config_sha256={config.server_config_sha256}",
+        *metadata,
         "--label",
         config.profile_name,
         "--save-result",
@@ -133,6 +166,56 @@ def build_benchmark_command(
     ])
     if config.ignore_eos:
         command.append("--ignore-eos")
+    return command
+
+
+def build_prewarm_command(
+    config: BenchmarkConfig, repetition: int = 1
+) -> list[str] | None:
+    if config.prewarm_prompts == 0:
+        return None
+    command = [
+        "vllm",
+        "bench",
+        "serve",
+        "--backend",
+        "openai",
+        "--base-url",
+        config.base_url,
+        "--endpoint",
+        config.endpoint,
+        "--model",
+        config.model,
+    ]
+    if config.local_tokenizer_path is not None:
+        command.extend(["--tokenizer", str(config.local_tokenizer_path)])
+    command.extend([
+        "--served-model-name",
+        config.served_model_name,
+        "--dataset-name",
+        "random",
+        "--input-len",
+        "64",
+        "--output-len",
+        "16",
+        "--num-prompts",
+        str(config.prewarm_prompts),
+        "--request-rate",
+        "inf",
+        "--burstiness",
+        "1",
+        "--max-concurrency",
+        "1",
+        "--num-warmups",
+        "0",
+        "--ready-check-timeout-sec",
+        str(config.ready_check_timeout_seconds),
+        "--seed",
+        str(config.prewarm_seed_for_repetition(repetition)),
+        "--temperature",
+        "0",
+        "--ignore-eos",
+    ])
     return command
 
 

@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 from qwen_serve_lab.commands import (
     build_benchmark_command,
+    build_prewarm_command,
     build_serve_command,
     build_serve_environment,
     render_shell_command,
@@ -140,6 +141,33 @@ class ServeConfigTests(unittest.TestCase):
             for field in controlled_fields:
                 self.assertEqual(getattr(config, field), getattr(reference, field))
 
+    def test_e04_server_profiles_change_only_prefix_caching(self) -> None:
+        off = ServeConfig.from_file(ROOT / "configs/serve/e04_prefix_off.toml")
+        on = ServeConfig.from_file(ROOT / "configs/serve/e04_prefix_on.toml")
+
+        self.assertFalse(off.enable_prefix_caching)
+        self.assertTrue(on.enable_prefix_caching)
+        controlled_fields = (
+            "model",
+            "revision",
+            "served_model_name",
+            "host",
+            "port",
+            "dtype",
+            "generation_config",
+            "max_model_len",
+            "gpu_memory_utilization",
+            "max_num_seqs",
+            "max_num_batched_tokens",
+            "kv_cache_dtype",
+            "enable_chunked_prefill",
+            "enable_per_request_metrics",
+            "wsl2_enable_pin_memory",
+            "use_flashinfer_sampler",
+        )
+        for field in controlled_fields:
+            self.assertEqual(getattr(off, field), getattr(on, field))
+
     def test_small_batch_budget_requires_chunked_prefill(self) -> None:
         config_text = (
             ROOT / "configs/serve/e02_batch_tokens_2048.toml"
@@ -234,6 +262,50 @@ class BenchmarkConfigTests(unittest.TestCase):
                     for config in matrix.configs
                 )
             )
+
+    def test_e04_prefix_matrices_are_paired_and_use_isolated_seeds(self) -> None:
+        off = BenchmarkMatrix.from_file(
+            ROOT / "configs/matrix/e04_prefix_off.toml"
+        )
+        on = BenchmarkMatrix.from_file(
+            ROOT / "configs/matrix/e04_prefix_on.toml"
+        )
+
+        self.assertEqual(len(off.configs), 5)
+        self.assertEqual(len(on.configs), 5)
+        for off_config, on_config in zip(off.configs, on.configs, strict=True):
+            self.assertEqual(off_config.dataset_name, "prefix_repetition")
+            self.assertFalse(off_config.server_prefix_caching_enabled)
+            self.assertTrue(on_config.server_prefix_caching_enabled)
+            self.assertEqual(off_config.seed, on_config.seed)
+            self.assertEqual(off_config.prefix_len, on_config.prefix_len)
+            self.assertEqual(off_config.suffix_len, on_config.suffix_len)
+            self.assertEqual(off_config.num_prefixes, on_config.num_prefixes)
+            self.assertEqual(off_config.seed_for_repetition(2), off_config.seed + 100)
+
+        command = build_benchmark_command(off.configs[2], repetition=2)
+        self.assertIn("--prefix-repetition-prefix-len", command)
+        self.assertIn("--prefix-repetition-num-prefixes", command)
+        self.assertNotIn("--input-len", command)
+        self.assertIn(f"effective_seed={off.configs[2].seed + 100}", command)
+        self.assertIn("nominal_reuse_percent=90", command)
+
+        prewarm = build_prewarm_command(off.configs[2], repetition=2)
+        self.assertIsNotNone(prewarm)
+        assert prewarm is not None
+        self.assertIn("random", prewarm)
+        self.assertIn(str(off.configs[2].seed + 100 + 1_000_000_000), prewarm)
+
+    def test_e04_capacity_uses_distinct_c8_seed_space(self) -> None:
+        matrix = BenchmarkMatrix.from_file(
+            ROOT / "configs/matrix/e04_prefix_on_capacity.toml"
+        )
+        self.assertEqual(len(matrix.configs), 1)
+        config = matrix.configs[0]
+        self.assertEqual(config.max_concurrency, 8)
+        self.assertEqual(config.prefix_len, 1792)
+        self.assertEqual(config.nominal_reuse_percent, 90)
+        self.assertEqual(config.seed, 20260821 + 50000)
 
     def test_matrix_resume_skips_three_matching_valid_repetitions(self) -> None:
         matrix_path = ROOT / "configs/matrix/baseline.toml"

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from qwen_serve_lab.results import (
     aggregate_records,
+    generated_texts_sha256,
     load_records_from_manifests,
     parse_vllm_result,
 )
@@ -43,6 +44,56 @@ def sample_result(repetition: int, goodput: float) -> dict[str, object]:
 
 
 class ResultTests(unittest.TestCase):
+    def test_generated_text_hash_is_order_independent(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            first = Path(temp_dir) / "first.json"
+            second = Path(temp_dir) / "second.json"
+            first.write_text(json.dumps({"generated_texts": ["a", "b", "a"]}))
+            second.write_text(json.dumps({"generated_texts": ["b", "a", "a"]}))
+
+            self.assertEqual(
+                generated_texts_sha256(first), generated_texts_sha256(second)
+            )
+
+    def test_prefix_result_requires_metrics_and_output_evidence(self) -> None:
+        result = sample_result(1, goodput=1.0)
+        result.update(
+            {
+                "profile": "e04_on_reuse90_p1024_c4",
+                "server_profile": "e04_prefix_on_bf16",
+                "effective_seed": "20260821",
+                "prefix_cache_enabled": "true",
+                "prefix_len": "1024",
+                "suffix_len": "1024",
+                "num_prefixes": "10",
+                "nominal_reuse_percent": "90",
+                "generated_texts": ["answer"],
+            }
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result_path = Path(temp_dir) / "result.json"
+            result_path.write_text(json.dumps(result))
+            output_hash = generated_texts_sha256(result_path)
+            record = parse_vllm_result(
+                result_path,
+                Path(temp_dir) / "manifest.json",
+                telemetry_summary={"peak_memory_used_mib": 9000},
+                run_evidence={
+                    "prefix_metrics": {
+                        "captured": True,
+                        "query_tokens": 1000.0,
+                        "hit_tokens": 450.0,
+                        "hit_rate_percent": 45.0,
+                    },
+                    "generated_texts_sha256": output_hash,
+                },
+            )
+
+        self.assertTrue(record.valid)
+        self.assertEqual(record.effective_seed, 20260821)
+        self.assertEqual(record.prefix_cache_hit_rate_percent, 45)
+        self.assertEqual(record.generated_texts_sha256, output_hash)
+
     def test_manifest_evidence_is_loaded_and_aggregated(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
