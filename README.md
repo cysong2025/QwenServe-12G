@@ -18,9 +18,10 @@
 
 ## 当前状态
 
-Stage 0 和 M1 BF16 基线已在目标 RTX 5070 上完成：12 个 short/medium/long
-并发 profile 均有 3 次有效重复、完整 GPU 遥测和 SLO 判定。当前进入
-M2 E02 batch token budget 单变量实验。
+Stage 0、M1 BF16 基线和 M2 E02 batch token budget 实验已在目标
+RTX 5070 上完成。E02 包含 4 个 budget、6 种负载形状和 72 次有效
+benchmark，并已生成可重建的差值和运行状态报告。当前准备进入 E04
+prefix reuse sweep。
 
 ```text
 docs/                 项目章程、可行性与实验协议
@@ -113,6 +114,8 @@ make summarize
 
 E02 的 budget 切换、启动门槛和可恢复矩阵流程见
 [E02 Batch Token Budget 实验手册](docs/M2_E02_BATCH_TOKEN_RUNBOOK.md)。
+完整数据解读、有效性限制和可复现结论见
+[E02 实验结果](docs/E02_RESULTS.md)。
 
 详细边界和验收标准见 [项目章程](docs/PROJECT_CHARTER.md)、[可行性分析](docs/FEASIBILITY.md) 与 [实验协议](docs/EXPERIMENT_PROTOCOL.md)。
 
