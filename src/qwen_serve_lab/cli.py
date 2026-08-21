@@ -382,6 +382,7 @@ def _run_server(config_path: Path, model_path: Path | None = None) -> int:
         "log": str(log_path),
         "returncode": None,
         "stopped_by_user": False,
+        "unexpected_exit": None,
     }
     write_json(manifest, manifest_path)
     print(f"Server manifest: {manifest_path}")
@@ -427,21 +428,46 @@ def _run_server(config_path: Path, model_path: Path | None = None) -> int:
             _clear_active_server(process.pid)
 
     manifest["returncode"] = returncode
+    manifest["unexpected_exit"] = not manifest["stopped_by_user"]
     write_json(manifest, manifest_path)
+    if manifest["unexpected_exit"] and returncode == 0:
+        print(
+            "Model server exited without a user stop; treating the clean process "
+            "exit as a service failure",
+            file=sys.stderr,
+        )
+        return 1
     return returncode
 
 
-def _execute_benchmark(config: BenchmarkConfig) -> int:
+def _execute_benchmark(
+    config: BenchmarkConfig, repetitions: list[int] | None = None
+) -> int:
     active_server = _verify_active_server(config)
     config.result_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    selected_repetitions = (
+        list(range(1, config.repetitions + 1))
+        if repetitions is None
+        else list(repetitions)
+    )
+    expected_repetitions = set(range(1, config.repetitions + 1))
+    if (
+        not selected_repetitions
+        or len(selected_repetitions) != len(set(selected_repetitions))
+        or not set(selected_repetitions).issubset(expected_repetitions)
+    ):
+        raise ConfigError(
+            "Benchmark repetitions must be unique values between 1 and "
+            f"{config.repetitions}"
+        )
     commands = [
         build_benchmark_command(config, repetition=index)
-        for index in range(1, config.repetitions + 1)
+        for index in selected_repetitions
     ]
     prewarm_commands = [
         build_prewarm_command(config, repetition=index)
-        for index in range(1, config.repetitions + 1)
+        for index in selected_repetitions
     ]
     manifest = {
         "schema_version": 1,
@@ -458,16 +484,38 @@ def _execute_benchmark(config: BenchmarkConfig) -> int:
             render_shell_command(command) if command is not None else None
             for command in prewarm_commands
         ],
+        "requested_repetitions": selected_repetitions,
         "runs": [],
     }
     manifest_path = Path("artifacts/env") / f"{timestamp}-{config.profile_name}.json"
     write_json(manifest, manifest_path)
     print(f"Environment manifest: {manifest_path}")
 
-    for index, (prewarm_command, command) in enumerate(
-        zip(prewarm_commands, commands, strict=True), start=1
+    run_items = list(
+        zip(selected_repetitions, prewarm_commands, commands, strict=True)
+    )
+    for position, (index, prewarm_command, command) in enumerate(
+        run_items, start=1
     ):
         print(f"Running repetition {index}/{config.repetitions}")
+        if position > 1:
+            try:
+                _verify_active_server(config)
+            except ConfigError as exc:
+                manifest["runs"].append(
+                    {
+                        "repetition": index,
+                        "effective_seed": config.seed_for_repetition(index),
+                        "returncode": 2,
+                        "execution_error": str(exc),
+                        "failed_stage": "server_check",
+                        "prewarm_returncode": None,
+                        "result_files": [],
+                    }
+                )
+                write_json(manifest, manifest_path)
+                print(str(exc), file=sys.stderr)
+                return 2
         prewarm_returncode = None
         prewarm_execution_error = None
         if prewarm_command is not None:
@@ -614,7 +662,7 @@ def _execute_benchmark(config: BenchmarkConfig) -> int:
                 file=sys.stderr,
             )
             return 2
-        if index < config.repetitions and config.cooldown_seconds:
+        if position < len(run_items) and config.cooldown_seconds:
             time.sleep(config.cooldown_seconds)
     return 0
 
@@ -654,9 +702,12 @@ def _run_matrix(
             raise ConfigError(f"Unknown matrix profile(s): {', '.join(unknown)}")
         configs = [config for config in configs if config.profile_name in selected_set]
 
+    work_items = [
+        (config, list(range(1, config.repetitions + 1))) for config in configs
+    ]
     if skip_completed and Path("artifacts/env").is_dir():
         records = load_records_from_manifests("artifacts/env")
-        pending: list[BenchmarkConfig] = []
+        pending: list[tuple[BenchmarkConfig, list[int]]] = []
         for config in configs:
             repetitions = {
                 record.repetition
@@ -677,15 +728,23 @@ def _run_matrix(
                     f"({config.repetitions}/{config.repetitions} valid repetitions)"
                 )
             else:
-                pending.append(config)
-        configs = pending
+                missing = sorted(expected - repetitions)
+                if repetitions:
+                    completed = ",".join(str(value) for value in sorted(repetitions))
+                    missing_text = ",".join(str(value) for value in missing)
+                    print(
+                        f"Resuming matrix profile: {config.profile_name}; "
+                        f"valid repetitions={completed}, missing={missing_text}"
+                    )
+                pending.append((config, missing))
+        work_items = pending
 
-    for index, config in enumerate(configs, start=1):
-        print(f"Matrix profile {index}/{len(configs)}: {config.profile_name}")
-        returncode = _execute_benchmark(config)
+    for index, (config, repetitions) in enumerate(work_items, start=1):
+        print(f"Matrix profile {index}/{len(work_items)}: {config.profile_name}")
+        returncode = _execute_benchmark(config, repetitions=repetitions)
         if returncode != 0:
             return returncode
-        if index < len(configs) and config.cooldown_seconds:
+        if index < len(work_items) and config.cooldown_seconds:
             time.sleep(config.cooldown_seconds)
     return 0
 

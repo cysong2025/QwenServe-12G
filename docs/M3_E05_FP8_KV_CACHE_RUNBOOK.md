@@ -21,7 +21,7 @@ dtype=bfloat16
 max_model_len=8192
 gpu_memory_utilization=0.82
 max_num_seqs=16
-max_num_batched_tokens=16384
+max_num_batched_tokens=8192
 enable_prefix_caching=false
 enable_chunked_prefill=true
 seed=20260821
@@ -35,6 +35,19 @@ seed=20260821
 | FP8 | `fp8_e4m3` | true |
 
 vLLM 0.25.1 的在线 scale 只使用一次随机 token warmup batch，随后固定 scale。它比默认 scale `1.0` 更合理，但不等同于使用代表性数据集和 `llm-compressor` 的离线校准。最终结论必须保留这一适用边界。
+
+### 2.1 预实验后的配置修订
+
+2026-08-21 的 BF16 预实验使用 `max_num_batched_tokens=16384`。`long_c16`
+在一次正好包含 16,384 个 prefill token 的调度步上触发 CUDA OOM：引擎只剩
+556.70 MiB 可用显存，BF16 前向还需申请 344.00 MiB 激活张量，但无法完成
+分配。当时 KV cache 使用率仅 23.06%，因此根因是过大的瞬时 prefill 激活峰值，
+不是 KV cache 容量耗尽。
+
+正式配置在 BF16/FP8 两侧同步冻结为 `max_num_batched_tokens=8192`，同时保留
+`max_num_seqs=16`。这项修订只降低瞬时激活显存压力，不改变实验的唯一主要
+自变量（KV cache dtype）。旧配置产生的 OOM 日志和 partial manifest 作为预实验
+证据保留，但由于 server config SHA-256 已改变，不得混入正式配对比较。
 
 ## 3. 性能与容量判据
 
@@ -95,6 +108,9 @@ make render-e05-bf16-matrix
 make render-e05-fp8-matrix
 ```
 
+如果更新前已经运行过 `max_num_batched_tokens=16384` 预实验，先按第 5.1 节归档
+旧证据，再启动正式实验。
+
 FP8 render 输出必须包含：
 
 ```text
@@ -104,6 +120,36 @@ FP8 render 输出必须包含：
 ```
 
 BF16 render 输出不得包含 `--calculate-kv-scales`。两侧都必须关闭 prefix caching，避免同时改变两个优化变量。
+
+### 5.1 归档旧 E05 预实验
+
+不要删除 OOM 证据。在 WSL 仓库根目录执行：
+
+```bash
+STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+ARCHIVE="artifacts/archive/e05-preflight-16384-${STAMP}"
+mkdir -p "$ARCHIVE/env" "$ARCHIVE/results" "$ARCHIVE/server"
+
+find artifacts/env -maxdepth 1 -type f -name '*e05_*.json' \
+  -exec mv -t "$ARCHIVE/env" {} +
+
+if [ -d artifacts/results/e05_kv_cache ]; then
+  mv artifacts/results/e05_kv_cache "$ARCHIVE/results/"
+fi
+
+if [ -d artifacts/results/e05_quality ]; then
+  mv artifacts/results/e05_quality "$ARCHIVE/results/"
+fi
+
+find artifacts/server -maxdepth 1 -type f \
+  \( -name '*e05_*.log' -o -name 'active.json' \) \
+  -exec mv -t "$ARCHIVE/server" {} +
+
+printf 'Archived preflight evidence at %s\n' "$ARCHIVE"
+```
+
+该操作只移动 E05 原始证据，不影响 E01/E02/E04。正式 BF16 和 FP8 数据必须在
+修订后的配置下都从头采集，不能复用旧 `long_c8` pilot 或旧质量集。
 
 ## 6. BF16 对照实验
 

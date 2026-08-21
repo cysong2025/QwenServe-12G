@@ -177,6 +177,7 @@ class ServeConfigTests(unittest.TestCase):
         self.assertFalse(bf16.calculate_kv_scales)
         self.assertTrue(fp8.calculate_kv_scales)
         self.assertEqual(bf16.seed, 20260821)
+        self.assertEqual(bf16.max_num_batched_tokens, 8192)
         fp8_command = build_serve_command(fp8)
         self.assertIn("--calculate-kv-scales", fp8_command)
         self.assertIn("--seed", fp8_command)
@@ -406,6 +407,45 @@ class BenchmarkConfigTests(unittest.TestCase):
 
         self.assertEqual(returncode, 0)
         execute.assert_not_called()
+
+    def test_matrix_resume_runs_only_missing_repetitions(self) -> None:
+        matrix_path = ROOT / "configs/matrix/baseline.toml"
+        config = BenchmarkMatrix.from_file(matrix_path).configs[0]
+        records = [
+            SimpleNamespace(
+                profile=config.profile_name,
+                benchmark_config_sha256=config.source_sha256,
+                server_config_sha256=config.server_config_sha256,
+                input_len=config.input_len,
+                output_len=config.output_len,
+                max_concurrency=config.max_concurrency,
+                completed=config.num_prompts,
+                failed=0,
+                valid=True,
+                repetition=1,
+            )
+        ]
+
+        with (
+            patch("qwen_serve_lab.cli.Path.is_dir", return_value=True),
+            patch(
+                "qwen_serve_lab.cli.load_records_from_manifests",
+                return_value=records,
+            ),
+            patch("qwen_serve_lab.cli._execute_benchmark", return_value=0) as execute,
+        ):
+            returncode = _run_matrix(
+                matrix_path,
+                [config.profile_name],
+                tokenizer_path=None,
+                skip_completed=True,
+            )
+
+        self.assertEqual(returncode, 0)
+        execute.assert_called_once()
+        called_config = execute.call_args.args[0]
+        self.assertEqual(called_config.profile_name, config.profile_name)
+        self.assertEqual(execute.call_args.kwargs["repetitions"], [2, 3])
 
     def test_benchmark_requires_matching_active_server(self) -> None:
         config = BenchmarkMatrix.from_file(
