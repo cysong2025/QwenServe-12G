@@ -168,6 +168,51 @@ class ServeConfigTests(unittest.TestCase):
         for field in controlled_fields:
             self.assertEqual(getattr(off, field), getattr(on, field))
 
+    def test_e05_server_profiles_change_only_kv_quantization(self) -> None:
+        bf16 = ServeConfig.from_file(ROOT / "configs/serve/e05_kv_bf16.toml")
+        fp8 = ServeConfig.from_file(ROOT / "configs/serve/e05_kv_fp8.toml")
+
+        self.assertEqual(bf16.kv_cache_dtype, "bfloat16")
+        self.assertEqual(fp8.kv_cache_dtype, "fp8_e4m3")
+        self.assertFalse(bf16.calculate_kv_scales)
+        self.assertTrue(fp8.calculate_kv_scales)
+        self.assertEqual(bf16.seed, 20260821)
+        fp8_command = build_serve_command(fp8)
+        self.assertIn("--calculate-kv-scales", fp8_command)
+        self.assertIn("--seed", fp8_command)
+        controlled_fields = (
+            "model",
+            "revision",
+            "served_model_name",
+            "host",
+            "port",
+            "dtype",
+            "generation_config",
+            "max_model_len",
+            "gpu_memory_utilization",
+            "max_num_seqs",
+            "max_num_batched_tokens",
+            "seed",
+            "enable_prefix_caching",
+            "enable_chunked_prefill",
+            "enable_per_request_metrics",
+            "wsl2_enable_pin_memory",
+            "use_flashinfer_sampler",
+        )
+        for field in controlled_fields:
+            self.assertEqual(getattr(bf16, field), getattr(fp8, field))
+
+    def test_kv_scale_calculation_requires_fp8(self) -> None:
+        config_text = (ROOT / "configs/serve/e05_kv_bf16.toml").read_text()
+        config_text = config_text.replace(
+            "calculate_kv_scales = false", "calculate_kv_scales = true"
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "invalid.toml"
+            path.write_text(config_text)
+            with self.assertRaises(ConfigError):
+                ServeConfig.from_file(path)
+
     def test_small_batch_budget_requires_chunked_prefill(self) -> None:
         config_text = (
             ROOT / "configs/serve/e02_batch_tokens_2048.toml"
@@ -306,6 +351,24 @@ class BenchmarkConfigTests(unittest.TestCase):
         self.assertEqual(config.prefix_len, 1792)
         self.assertEqual(config.nominal_reuse_percent, 90)
         self.assertEqual(config.seed, 20260821 + 50000)
+
+    def test_e05_matrices_are_paired_long_context_workloads(self) -> None:
+        bf16 = BenchmarkMatrix.from_file(
+            ROOT / "configs/matrix/e05_kv_bf16.toml"
+        )
+        fp8 = BenchmarkMatrix.from_file(
+            ROOT / "configs/matrix/e05_kv_fp8.toml"
+        )
+
+        self.assertEqual(len(bf16.configs), 6)
+        self.assertEqual(len(fp8.configs), 6)
+        for control, treatment in zip(bf16.configs, fp8.configs, strict=True):
+            self.assertEqual(control.input_len, treatment.input_len)
+            self.assertEqual(control.output_len, treatment.output_len)
+            self.assertEqual(control.max_concurrency, treatment.max_concurrency)
+            self.assertEqual(control.seed, treatment.seed)
+            self.assertEqual(control.repetition_seed_stride, 100)
+            self.assertEqual(control.seed_for_repetition(3), control.seed + 200)
 
     def test_matrix_resume_skips_three_matching_valid_repetitions(self) -> None:
         matrix_path = ROOT / "configs/matrix/baseline.toml"

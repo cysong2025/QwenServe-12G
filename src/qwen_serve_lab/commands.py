@@ -47,6 +47,10 @@ def build_serve_command(config: ServeConfig) -> list[str]:
         "--kv-cache-dtype",
         config.kv_cache_dtype,
     ])
+    if config.seed is not None:
+        command.extend(["--seed", str(config.seed)])
+    if config.calculate_kv_scales:
+        command.append("--calculate-kv-scales")
     command.append(
         "--enable-prefix-caching"
         if config.enable_prefix_caching

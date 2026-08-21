@@ -1,0 +1,340 @@
+{
+  "schema_version": 1,
+  "description": "Balanced 50-case AI infrastructure incident triage set for E05 BF16 versus FP8 KV cache quality evaluation.",
+  "root_cause_labels": [
+    "cuda_oom",
+    "kv_cache_exhaustion",
+    "driver_cuda_mismatch",
+    "dependency_conflict",
+    "model_artifact_unavailable",
+    "tokenizer_mismatch",
+    "disk_exhaustion",
+    "request_overload",
+    "model_path_invalid",
+    "unsupported_precision"
+  ],
+  "action_labels": [
+    "reduce_batch_size",
+    "enable_gradient_checkpointing",
+    "reduce_concurrency",
+    "reduce_context_length",
+    "align_driver_and_cuda",
+    "install_compatible_torch_build",
+    "pin_compatible_dependencies",
+    "recreate_virtual_environment",
+    "use_local_model_snapshot",
+    "configure_network_or_mirror",
+    "use_matching_tokenizer",
+    "pin_model_revision",
+    "free_disk_space",
+    "move_model_cache",
+    "add_admission_control",
+    "cap_request_concurrency",
+    "correct_model_path",
+    "verify_snapshot_files",
+    "use_supported_dtype",
+    "verify_gpu_capability"
+  ],
+  "cases": [
+    {
+      "id": "cuda-oom-01",
+      "incident": "QLoRA training fails on the first backward pass with CUDA out of memory. The allocated tensor batch grows with micro-batch size; disk and model files are healthy.",
+      "root_cause": "cuda_oom",
+      "actions": ["reduce_batch_size", "enable_gradient_checkpointing"]
+    },
+    {
+      "id": "cuda-oom-02",
+      "incident": "A fine-tuning job succeeds with micro-batch 1 but fails with micro-batch 8 while allocating optimizer activations. The error explicitly says CUDA out of memory.",
+      "root_cause": "cuda_oom",
+      "actions": ["reduce_batch_size", "enable_gradient_checkpointing"]
+    },
+    {
+      "id": "cuda-oom-03",
+      "incident": "During adapter training, reserved GPU memory reaches the device limit and backward cannot allocate another 900 MiB. No inference server is running.",
+      "root_cause": "cuda_oom",
+      "actions": ["reduce_batch_size", "enable_gradient_checkpointing"]
+    },
+    {
+      "id": "cuda-oom-04",
+      "incident": "The trainer loads correctly, then OOMs only after increasing per-device train batch size. Sequence length and package versions are unchanged.",
+      "root_cause": "cuda_oom",
+      "actions": ["reduce_batch_size", "enable_gradient_checkpointing"]
+    },
+    {
+      "id": "cuda-oom-05",
+      "incident": "PyTorch reports CUDA out of memory in the backward graph for a QLoRA run. Smaller batches previously completed on the same GPU and driver.",
+      "root_cause": "cuda_oom",
+      "actions": ["reduce_batch_size", "enable_gradient_checkpointing"]
+    },
+    {
+      "id": "kv-cache-01",
+      "incident": "The vLLM engine rejects new 8K requests because no KV cache blocks are available at concurrency 16. Model weights remain loaded and short requests still finish.",
+      "root_cause": "kv_cache_exhaustion",
+      "actions": ["reduce_concurrency", "reduce_context_length"]
+    },
+    {
+      "id": "kv-cache-02",
+      "incident": "Long-context traffic fills every GPU KV block; requests wait indefinitely while GPU model memory is otherwise stable. Lower concurrency avoids the issue.",
+      "root_cause": "kv_cache_exhaustion",
+      "actions": ["reduce_concurrency", "reduce_context_length"]
+    },
+    {
+      "id": "kv-cache-03",
+      "incident": "Startup reports enough room for only four 8192-token sequences, but the load test admits eight near-maximum prompts and stalls on cache allocation.",
+      "root_cause": "kv_cache_exhaustion",
+      "actions": ["reduce_concurrency", "reduce_context_length"]
+    },
+    {
+      "id": "kv-cache-04",
+      "incident": "Decode scheduling repeatedly preempts long requests because the KV cache has no free blocks. There is no CUDA allocator OOM during model loading.",
+      "root_cause": "kv_cache_exhaustion",
+      "actions": ["reduce_concurrency", "reduce_context_length"]
+    },
+    {
+      "id": "kv-cache-05",
+      "incident": "A serving workload is healthy at 2K context but reaches KV cache capacity at 8K context with the same number of users.",
+      "root_cause": "kv_cache_exhaustion",
+      "actions": ["reduce_concurrency", "reduce_context_length"]
+    },
+    {
+      "id": "driver-cuda-01",
+      "incident": "torch.cuda.is_available is false and PyTorch says the installed NVIDIA driver is too old for the CUDA runtime bundled in the wheel.",
+      "root_cause": "driver_cuda_mismatch",
+      "actions": ["align_driver_and_cuda", "install_compatible_torch_build"]
+    },
+    {
+      "id": "driver-cuda-02",
+      "incident": "Importing a CUDA extension fails with an undefined CUDA symbol after upgrading torch without changing the host driver.",
+      "root_cause": "driver_cuda_mismatch",
+      "actions": ["align_driver_and_cuda", "install_compatible_torch_build"]
+    },
+    {
+      "id": "driver-cuda-03",
+      "incident": "nvidia-smi works, but the application reports that its CUDA runtime version is unsupported by the current driver branch.",
+      "root_cause": "driver_cuda_mismatch",
+      "actions": ["align_driver_and_cuda", "install_compatible_torch_build"]
+    },
+    {
+      "id": "driver-cuda-04",
+      "incident": "A newly installed cu130 torch wheel cannot initialize CUDA on a machine whose driver supports only an older runtime. Model files are local and valid.",
+      "root_cause": "driver_cuda_mismatch",
+      "actions": ["align_driver_and_cuda", "install_compatible_torch_build"]
+    },
+    {
+      "id": "driver-cuda-05",
+      "incident": "The custom operator was compiled against a different CUDA major version than the active PyTorch build and fails to load its shared library.",
+      "root_cause": "driver_cuda_mismatch",
+      "actions": ["align_driver_and_cuda", "install_compatible_torch_build"]
+    },
+    {
+      "id": "dependency-01",
+      "incident": "vllm bench crashes because datasets expects pyarrow.PyExtensionType, which was removed by the installed PyArrow release.",
+      "root_cause": "dependency_conflict",
+      "actions": ["pin_compatible_dependencies", "recreate_virtual_environment"]
+    },
+    {
+      "id": "dependency-02",
+      "incident": "Installing an unrelated package upgraded transformers beyond the range required by the serving stack; imports now fail before CUDA initialization.",
+      "root_cause": "dependency_conflict",
+      "actions": ["pin_compatible_dependencies", "recreate_virtual_environment"]
+    },
+    {
+      "id": "dependency-03",
+      "incident": "pip reports incompatible requirements for tokenizers and transformers, and the benchmark CLI fails during module import.",
+      "root_cause": "dependency_conflict",
+      "actions": ["pin_compatible_dependencies", "recreate_virtual_environment"]
+    },
+    {
+      "id": "dependency-04",
+      "incident": "The environment contains packages from two experiments with mutually incompatible pydantic versions. A clean lockfile installation works elsewhere.",
+      "root_cause": "dependency_conflict",
+      "actions": ["pin_compatible_dependencies", "recreate_virtual_environment"]
+    },
+    {
+      "id": "dependency-05",
+      "incident": "A partial package upgrade leaves vLLM and its benchmark extras on incompatible versions, producing an AttributeError at startup.",
+      "root_cause": "dependency_conflict",
+      "actions": ["pin_compatible_dependencies", "recreate_virtual_environment"]
+    },
+    {
+      "id": "artifact-01",
+      "incident": "The host times out connecting to huggingface.co on port 443, so config.json and weights cannot be downloaded. Other local applications are healthy.",
+      "root_cause": "model_artifact_unavailable",
+      "actions": ["use_local_model_snapshot", "configure_network_or_mirror"]
+    },
+    {
+      "id": "artifact-02",
+      "incident": "Serving retries a model repository HEAD request and then reports network unreachable. A verified snapshot can be transferred from another machine.",
+      "root_cause": "model_artifact_unavailable",
+      "actions": ["use_local_model_snapshot", "configure_network_or_mirror"]
+    },
+    {
+      "id": "artifact-03",
+      "incident": "Corporate egress blocks the model registry, and no files exist in the local cache. DNS for unrelated sites succeeds.",
+      "root_cause": "model_artifact_unavailable",
+      "actions": ["use_local_model_snapshot", "configure_network_or_mirror"]
+    },
+    {
+      "id": "artifact-04",
+      "incident": "The model Hub connection is reset on every download attempt, while a domestic mirror is reachable and the intended revision is known.",
+      "root_cause": "model_artifact_unavailable",
+      "actions": ["use_local_model_snapshot", "configure_network_or_mirror"]
+    },
+    {
+      "id": "artifact-05",
+      "incident": "An offline inference node has no cached model artifact and cannot reach the remote repository. The service configuration itself is valid.",
+      "root_cause": "model_artifact_unavailable",
+      "actions": ["use_local_model_snapshot", "configure_network_or_mirror"]
+    },
+    {
+      "id": "tokenizer-01",
+      "incident": "The benchmark tokenizes prompts with a newer tokenizer revision than the server model snapshot, producing different token IDs for the same text.",
+      "root_cause": "tokenizer_mismatch",
+      "actions": ["use_matching_tokenizer", "pin_model_revision"]
+    },
+    {
+      "id": "tokenizer-02",
+      "incident": "Requests fail alignment checks because the client uses a tokenizer from another Qwen model while the server uses Qwen2.5-3B-Instruct.",
+      "root_cause": "tokenizer_mismatch",
+      "actions": ["use_matching_tokenizer", "pin_model_revision"]
+    },
+    {
+      "id": "tokenizer-03",
+      "incident": "Prompt lengths measured by the benchmark disagree with server usage after only tokenizer files were updated in the local snapshot.",
+      "root_cause": "tokenizer_mismatch",
+      "actions": ["use_matching_tokenizer", "pin_model_revision"]
+    },
+    {
+      "id": "tokenizer-04",
+      "incident": "Special chat tokens are encoded as ordinary text because the client tokenizer revision does not match the pinned model revision.",
+      "root_cause": "tokenizer_mismatch",
+      "actions": ["use_matching_tokenizer", "pin_model_revision"]
+    },
+    {
+      "id": "tokenizer-05",
+      "incident": "The server is offline-capable, but the benchmark silently downloads a different tokenizer and reports input lengths unlike the controlled run.",
+      "root_cause": "tokenizer_mismatch",
+      "actions": ["use_matching_tokenizer", "pin_model_revision"]
+    },
+    {
+      "id": "disk-01",
+      "incident": "Downloading model shards stops with No space left on device. GPU memory is unused and the network remains connected.",
+      "root_cause": "disk_exhaustion",
+      "actions": ["free_disk_space", "move_model_cache"]
+    },
+    {
+      "id": "disk-02",
+      "incident": "The Hugging Face cache partition is 100% full and cannot write a temporary safetensors shard.",
+      "root_cause": "disk_exhaustion",
+      "actions": ["free_disk_space", "move_model_cache"]
+    },
+    {
+      "id": "disk-03",
+      "incident": "Checkpoint saving fails with errno 28 after training, although RAM and VRAM have free capacity.",
+      "root_cause": "disk_exhaustion",
+      "actions": ["free_disk_space", "move_model_cache"]
+    },
+    {
+      "id": "disk-04",
+      "incident": "The root filesystem has only a few megabytes free, and model extraction fails while a larger mounted volume is available.",
+      "root_cause": "disk_exhaustion",
+      "actions": ["free_disk_space", "move_model_cache"]
+    },
+    {
+      "id": "disk-05",
+      "incident": "A repeated experiment fills the cache with old snapshots, preventing the current model manifest from being written.",
+      "root_cause": "disk_exhaustion",
+      "actions": ["free_disk_space", "move_model_cache"]
+    },
+    {
+      "id": "overload-01",
+      "incident": "An unbounded burst sends hundreds of requests to a healthy service; queue time and P95 TTFT explode while each completed request is correct.",
+      "root_cause": "request_overload",
+      "actions": ["add_admission_control", "cap_request_concurrency"]
+    },
+    {
+      "id": "overload-02",
+      "incident": "Latency SLO failures occur only when arrival rate exceeds sustainable throughput. GPU memory and model artifacts remain stable.",
+      "root_cause": "request_overload",
+      "actions": ["add_admission_control", "cap_request_concurrency"]
+    },
+    {
+      "id": "overload-03",
+      "incident": "The API accepts every request during a traffic spike, causing a long queue and timeouts without engine crashes.",
+      "root_cause": "request_overload",
+      "actions": ["add_admission_control", "cap_request_concurrency"]
+    },
+    {
+      "id": "overload-04",
+      "incident": "A load test with unlimited concurrency drives goodput toward zero because most requests miss TTFT SLO despite nonzero raw throughput.",
+      "root_cause": "request_overload",
+      "actions": ["add_admission_control", "cap_request_concurrency"]
+    },
+    {
+      "id": "overload-05",
+      "incident": "The service is fast at controlled concurrency but degrades sharply when the gateway removes its request limit and admits a large burst.",
+      "root_cause": "request_overload",
+      "actions": ["add_admission_control", "cap_request_concurrency"]
+    },
+    {
+      "id": "model-path-01",
+      "incident": "vLLM is given /models/qwen but config.json is actually under /models/Qwen2.5-3B-Instruct, so it reports that the local path is not a valid model.",
+      "root_cause": "model_path_invalid",
+      "actions": ["correct_model_path", "verify_snapshot_files"]
+    },
+    {
+      "id": "model-path-02",
+      "incident": "The configured local directory exists but contains only a README and no config.json or safetensors files.",
+      "root_cause": "model_path_invalid",
+      "actions": ["correct_model_path", "verify_snapshot_files"]
+    },
+    {
+      "id": "model-path-03",
+      "incident": "A relative model path resolves from the wrong working directory and vLLM cannot find tokenizer.json in that location.",
+      "root_cause": "model_path_invalid",
+      "actions": ["correct_model_path", "verify_snapshot_files"]
+    },
+    {
+      "id": "model-path-04",
+      "incident": "The service points at a parent cache directory instead of the pinned snapshot directory containing config.json and model shards.",
+      "root_cause": "model_path_invalid",
+      "actions": ["correct_model_path", "verify_snapshot_files"]
+    },
+    {
+      "id": "model-path-05",
+      "incident": "Startup says the supplied path is missing configuration files; network access is intentionally disabled because the model should be local.",
+      "root_cause": "model_path_invalid",
+      "actions": ["correct_model_path", "verify_snapshot_files"]
+    },
+    {
+      "id": "precision-01",
+      "incident": "The selected FP8 kernel reports that the GPU architecture does not support the requested precision mode, while BF16 starts successfully.",
+      "root_cause": "unsupported_precision",
+      "actions": ["use_supported_dtype", "verify_gpu_capability"]
+    },
+    {
+      "id": "precision-02",
+      "incident": "Starting with an experimental cache dtype fails an architecture capability check before any requests arrive; using bfloat16 avoids the failure.",
+      "root_cause": "unsupported_precision",
+      "actions": ["use_supported_dtype", "verify_gpu_capability"]
+    },
+    {
+      "id": "precision-03",
+      "incident": "A quantized attention backend requires a newer compute capability than the installed GPU and rejects initialization.",
+      "root_cause": "unsupported_precision",
+      "actions": ["use_supported_dtype", "verify_gpu_capability"]
+    },
+    {
+      "id": "precision-04",
+      "incident": "The engine can load model weights in BF16 but raises not implemented when KV cache dtype is changed to an unsupported low-precision format.",
+      "root_cause": "unsupported_precision",
+      "actions": ["use_supported_dtype", "verify_gpu_capability"]
+    },
+    {
+      "id": "precision-05",
+      "incident": "A low-precision execution path is unavailable for this device generation, and the same configuration works after selecting a supported dtype.",
+      "root_cause": "unsupported_precision",
+      "actions": ["use_supported_dtype", "verify_gpu_capability"]
+    }
+  ]
+}

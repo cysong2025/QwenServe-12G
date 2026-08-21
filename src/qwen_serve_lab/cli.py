@@ -23,6 +23,15 @@ from qwen_serve_lab.e04 import (
     write_e04_output_diagnostics,
 )
 from qwen_serve_lab.e04_canary import compare_e04_canary, run_e04_canary
+from qwen_serve_lab.e05 import (
+    write_e05_capacity_report,
+    write_e05_comparison,
+)
+from qwen_serve_lab.e05_quality import (
+    compare_e05_quality,
+    run_e05_quality,
+    summarize_e05_human_review,
+)
 from qwen_serve_lab.config import (
     BenchmarkConfig,
     BenchmarkMatrix,
@@ -187,6 +196,75 @@ def _parser() -> argparse.ArgumentParser:
     )
     compare_e04_canary_parser.add_argument(
         "--output-dir", type=Path, default=Path("reports/e04_prefix_cache")
+    )
+    compare_e05 = subparsers.add_parser(
+        "compare-e05", help="Compare paired E05 BF16/FP8 performance runs"
+    )
+    compare_e05.add_argument(
+        "--runs-csv",
+        type=Path,
+        default=Path("reports/e05_kv_cache/runs.csv"),
+    )
+    compare_e05.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e05_kv_cache")
+    )
+    capacity_e05 = subparsers.add_parser(
+        "capacity-e05", help="Parse E05 KV capacity from server startup logs"
+    )
+    capacity_e05.add_argument(
+        "--manifest-dir", type=Path, default=Path("artifacts/env")
+    )
+    capacity_e05.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e05_kv_cache")
+    )
+    run_e05_quality_parser = subparsers.add_parser(
+        "run-e05-quality", help="Run the fixed 50-case E05 quality set"
+    )
+    run_e05_quality_parser.add_argument(
+        "--state", choices=("bf16", "fp8"), required=True
+    )
+    run_e05_quality_parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=Path("datasets/e05_ai_infra_quality.json"),
+    )
+    run_e05_quality_parser.add_argument(
+        "--result-root",
+        type=Path,
+        default=Path("artifacts/results/e05_quality"),
+    )
+    run_e05_quality_parser.add_argument(
+        "--base-url", default="http://127.0.0.1:8000"
+    )
+    run_e05_quality_parser.add_argument(
+        "--served-model-name", default="qwen2.5-3b-instruct"
+    )
+    compare_e05_quality_parser = subparsers.add_parser(
+        "compare-e05-quality", help="Compare latest BF16/FP8 E05 quality runs"
+    )
+    compare_e05_quality_parser.add_argument(
+        "--result-root",
+        type=Path,
+        default=Path("artifacts/results/e05_quality"),
+    )
+    compare_e05_quality_parser.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e05_kv_cache")
+    )
+    human_e05 = subparsers.add_parser(
+        "summarize-e05-human-review", help="Unblind and summarize E05 human scores"
+    )
+    human_e05.add_argument(
+        "--review-csv",
+        type=Path,
+        default=Path("reports/e05_kv_cache/human_review.csv"),
+    )
+    human_e05.add_argument(
+        "--review-key",
+        type=Path,
+        default=Path("reports/e05_kv_cache/human_review_key.json"),
+    )
+    human_e05.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e05_kv_cache")
     )
     return parser
 
@@ -714,6 +792,47 @@ def main(argv: list[str] | None = None) -> int:
             json_path, markdown_path, passed = compare_e04_canary(
                 result_root=args.result_root,
                 output_dir=args.output_dir,
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0 if passed else 2
+        if args.command == "compare-e05":
+            csv_path, markdown_path = write_e05_comparison(
+                args.runs_csv, args.output_dir
+            )
+            print(csv_path)
+            print(markdown_path)
+            return 0
+        if args.command == "capacity-e05":
+            json_path, markdown_path = write_e05_capacity_report(
+                args.manifest_dir, args.output_dir
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0
+        if args.command == "run-e05-quality":
+            output_path, valid = run_e05_quality(
+                state=args.state,
+                dataset_path=args.dataset,
+                result_root=args.result_root,
+                base_url=args.base_url,
+                served_model_name=args.served_model_name,
+            )
+            print(output_path)
+            return 0 if valid else 2
+        if args.command == "compare-e05-quality":
+            json_path, markdown_path, passed = compare_e05_quality(
+                result_root=args.result_root,
+                output_dir=args.output_dir,
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0 if passed else 2
+        if args.command == "summarize-e05-human-review":
+            json_path, markdown_path, passed = summarize_e05_human_review(
+                args.review_csv,
+                args.review_key,
+                args.output_dir,
             )
             print(json_path)
             print(markdown_path)

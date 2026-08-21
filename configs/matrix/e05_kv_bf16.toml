@@ -1,0 +1,48 @@
+[profile]
+name = "e05_kv_bf16_matrix"
+server_profile = "e05_kv_bf16"
+server_config = "../serve/e05_kv_bf16.toml"
+
+[matrix]
+profile_prefix = "e05_bf16"
+concurrencies = [8, 16]
+result_root = "artifacts/results/e05_kv_cache/bf16"
+
+[[workloads]]
+name = "long"
+input_len = 2048
+output_len = 256
+seed_offset = 0
+
+[[workloads]]
+name = "xlong"
+input_len = 4096
+output_len = 256
+seed_offset = 10000
+
+[[workloads]]
+name = "nearmax"
+input_len = 7168
+output_len = 256
+seed_offset = 20000
+
+[benchmark]
+model = "Qwen/Qwen2.5-3B-Instruct"
+served_model_name = "qwen2.5-3b-instruct"
+base_url = "http://127.0.0.1:8000"
+endpoint = "/v1/completions"
+dataset_name = "random"
+num_prompts = 100
+request_rate = "inf"
+burstiness = 1.0
+num_warmups = 10
+metric_percentiles = [50, 95, 99]
+goodput_ttft_ms = 1000
+goodput_tpot_ms = 50
+seed = 20260821
+repetition_seed_stride = 100
+temperature = 0.0
+ignore_eos = true
+repetitions = 3
+cooldown_seconds = 30
+ready_check_timeout_seconds = 60
