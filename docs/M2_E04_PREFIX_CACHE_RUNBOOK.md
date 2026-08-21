@@ -164,6 +164,41 @@ sed -n '1,260p' reports/e04_prefix_cache/output_diagnostics.md
 忽略异步完成顺序；后者仍低于 100% 表示生成文本内容确有差异，需要先区分少量数值
 非确定性与输入批次未对齐，再决定是否重跑或修正实验设计。
 
+当随机 token 性能矩阵存在部分输出差异时，运行固定自然语言正确性 canary。该步骤
+使用仓库内的 24 个可人工核对的查表请求，固定完整 prompt SHA-256，串行发送短输出，
+并要求 ON 侧实际产生 prefix cache hit。
+
+终端 1 启动新的 OFF 服务：
+
+```bash
+make serve-e04-off-local
+```
+
+终端 2 运行 OFF canary：
+
+```bash
+make run-e04-canary-off
+```
+
+完成后在终端 1 按 `Ctrl+C`，启动新的 ON 服务：
+
+```bash
+make serve-e04-on-local
+```
+
+终端 2 运行 ON canary 并生成比较报告：
+
+```bash
+make run-e04-canary-on
+make compare-e04-canary
+sed -n '1,220p' reports/e04_prefix_cache/correctness_canary.md
+```
+
+canary 的 `PASS` 门槛是：数据集哈希一致、24/24 prompt 一致、OFF 与 ON 均
+24/24 命中预期答案、OFF/ON 输出 24/24 完全一致，并且 ON 的实际缓存命中 token
+大于零。若比较命令返回非零，报告仍会生成；保留报告并先检查失败项，不要重跑正式
+性能矩阵。
+
 只提交可重建的小型报告，不提交原始 benchmark JSON、Prometheus snapshot 或 telemetry：
 
 ```bash

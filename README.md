@@ -121,6 +121,8 @@ E02 的 budget 切换、启动门槛和可恢复矩阵流程见
 
 E04 的 OFF/ON 配对、缓存隔离、实际 token 命中率采集和正式矩阵步骤见
 [E04 Automatic Prefix Caching 实验手册](docs/M2_E04_PREFIX_CACHE_RUNBOOK.md)。
+随机 token 输出不完全一致时，手册中的 correctness canary 使用固定自然语言数据集
+独立验证 prompt、预期答案、OFF/ON 输出和实际 prefix cache hit，不需要重跑性能矩阵。
 
 详细边界和验收标准见 [项目章程](docs/PROJECT_CHARTER.md)、[可行性分析](docs/FEASIBILITY.md) 与 [实验协议](docs/EXPERIMENT_PROTOCOL.md)。
 

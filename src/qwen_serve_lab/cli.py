@@ -22,6 +22,7 @@ from qwen_serve_lab.e04 import (
     write_e04_comparison,
     write_e04_output_diagnostics,
 )
+from qwen_serve_lab.e04_canary import compare_e04_canary, run_e04_canary
 from qwen_serve_lab.config import (
     BenchmarkConfig,
     BenchmarkMatrix,
@@ -154,6 +155,37 @@ def _parser() -> argparse.ArgumentParser:
         default=Path("reports/e04_prefix_cache/runs.csv"),
     )
     diagnose_e04.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e04_prefix_cache")
+    )
+    run_e04_canary_parser = subparsers.add_parser(
+        "run-e04-canary", help="Run the fixed E04 correctness canary"
+    )
+    run_e04_canary_parser.add_argument("--state", choices=("off", "on"), required=True)
+    run_e04_canary_parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=Path("datasets/e04_correctness_canary.json"),
+    )
+    run_e04_canary_parser.add_argument(
+        "--result-root",
+        type=Path,
+        default=Path("artifacts/results/e04_correctness_canary"),
+    )
+    run_e04_canary_parser.add_argument(
+        "--base-url", default="http://127.0.0.1:8000"
+    )
+    run_e04_canary_parser.add_argument(
+        "--served-model-name", default="qwen2.5-3b-instruct"
+    )
+    compare_e04_canary_parser = subparsers.add_parser(
+        "compare-e04-canary", help="Compare latest E04 OFF/ON canary results"
+    )
+    compare_e04_canary_parser.add_argument(
+        "--result-root",
+        type=Path,
+        default=Path("artifacts/results/e04_correctness_canary"),
+    )
+    compare_e04_canary_parser.add_argument(
         "--output-dir", type=Path, default=Path("reports/e04_prefix_cache")
     )
     return parser
@@ -668,6 +700,24 @@ def main(argv: list[str] | None = None) -> int:
             print(csv_path)
             print(markdown_path)
             return 0
+        if args.command == "run-e04-canary":
+            output_path, valid = run_e04_canary(
+                state=args.state,
+                dataset_path=args.dataset,
+                result_root=args.result_root,
+                base_url=args.base_url,
+                served_model_name=args.served_model_name,
+            )
+            print(output_path)
+            return 0 if valid else 2
+        if args.command == "compare-e04-canary":
+            json_path, markdown_path, passed = compare_e04_canary(
+                result_root=args.result_root,
+                output_dir=args.output_dir,
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0 if passed else 2
     except (ConfigError, MetricsError, ResultError) as exc:
         print(f"Configuration error: {exc}", file=sys.stderr)
         return 2

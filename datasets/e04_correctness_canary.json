@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "description": "Deterministic natural-language lookup canary for E04 prefix caching correctness",
+  "groups": [
+    {
+      "name": "incident_lookup",
+      "shared_prefix": "You are a deterministic incident lookup service. Use only the records below. Return exactly the requested field value with no explanation, label, quotation marks, or punctuation.\n\nIncident records:\nINC-1042 | service=payments-api | severity=SEV-1 | owner=team-amber | region=ap-southeast-1 | status=mitigated\nINC-1043 | service=search-indexer | severity=SEV-3 | owner=team-cobalt | region=eu-west-1 | status=monitoring\nINC-1044 | service=identity-gateway | severity=SEV-2 | owner=team-jade | region=us-east-2 | status=investigating\nINC-1045 | service=order-router | severity=SEV-2 | owner=team-silver | region=ap-northeast-1 | status=resolved\nINC-1046 | service=media-worker | severity=SEV-4 | owner=team-violet | region=us-west-2 | status=monitoring\nINC-1047 | service=billing-ledger | severity=SEV-1 | owner=team-amber | region=eu-central-1 | status=mitigated\nINC-1048 | service=feature-store | severity=SEV-3 | owner=team-cobalt | region=ap-southeast-2 | status=resolved\nINC-1049 | service=notification-hub | severity=SEV-4 | owner=team-jade | region=ca-central-1 | status=investigating\nINC-1050 | service=inventory-reader | severity=SEV-2 | owner=team-silver | region=eu-north-1 | status=monitoring\nINC-1051 | service=fraud-scorer | severity=SEV-1 | owner=team-violet | region=us-east-1 | status=resolved\nINC-1052 | service=profile-writer | severity=SEV-3 | owner=team-amber | region=ap-south-1 | status=investigating\nINC-1053 | service=event-relay | severity=SEV-4 | owner=team-cobalt | region=sa-east-1 | status=mitigated",
+      "cases": [
+        {"id": "incident-01", "question": "What is the owner of INC-1044?", "expected": "team-jade"},
+        {"id": "incident-02", "question": "What is the region of INC-1047?", "expected": "eu-central-1"},
+        {"id": "incident-03", "question": "What is the status of INC-1051?", "expected": "resolved"},
+        {"id": "incident-04", "question": "What is the severity of INC-1043?", "expected": "SEV-3"},
+        {"id": "incident-05", "question": "What is the service of INC-1050?", "expected": "inventory-reader"},
+        {"id": "incident-06", "question": "What is the owner of INC-1046?", "expected": "team-violet"},
+        {"id": "incident-07", "question": "What is the region of INC-1052?", "expected": "ap-south-1"},
+        {"id": "incident-08", "question": "What is the status of INC-1049?", "expected": "investigating"}
+      ]
+    },
+    {
+      "name": "deployment_lookup",
+      "shared_prefix": "You are a deterministic deployment manifest lookup service. Use only the manifest entries below. Return exactly the requested field value with no explanation, label, quotation marks, or punctuation.\n\nDeployment manifest:\nDEP-2101 | application=catalog-api | version=2.14.7 | replicas=6 | cluster=prod-a | strategy=rolling\nDEP-2102 | application=checkout-web | version=5.8.2 | replicas=10 | cluster=prod-b | strategy=canary\nDEP-2103 | application=auth-worker | version=3.3.9 | replicas=4 | cluster=prod-c | strategy=blue-green\nDEP-2104 | application=pricing-engine | version=7.1.4 | replicas=8 | cluster=prod-a | strategy=rolling\nDEP-2105 | application=shipment-planner | version=1.9.6 | replicas=5 | cluster=prod-d | strategy=recreate\nDEP-2106 | application=review-service | version=4.6.3 | replicas=7 | cluster=prod-b | strategy=canary\nDEP-2107 | application=tax-calculator | version=6.0.1 | replicas=3 | cluster=prod-c | strategy=blue-green\nDEP-2108 | application=recommendation-api | version=8.2.5 | replicas=12 | cluster=prod-a | strategy=rolling\nDEP-2109 | application=email-dispatcher | version=2.7.8 | replicas=4 | cluster=prod-d | strategy=recreate\nDEP-2110 | application=warehouse-sync | version=9.4.2 | replicas=9 | cluster=prod-b | strategy=canary\nDEP-2111 | application=promotion-rules | version=3.8.0 | replicas=6 | cluster=prod-c | strategy=blue-green\nDEP-2112 | application=session-store | version=1.5.3 | replicas=11 | cluster=prod-a | strategy=rolling",
+      "cases": [
+        {"id": "deployment-01", "question": "What is the version of DEP-2108?", "expected": "8.2.5"},
+        {"id": "deployment-02", "question": "What is the cluster of DEP-2105?", "expected": "prod-d"},
+        {"id": "deployment-03", "question": "What is the strategy of DEP-2103?", "expected": "blue-green"},
+        {"id": "deployment-04", "question": "What is the replicas value of DEP-2110?", "expected": "9"},
+        {"id": "deployment-05", "question": "What is the application of DEP-2102?", "expected": "checkout-web"},
+        {"id": "deployment-06", "question": "What is the version of DEP-2111?", "expected": "3.8.0"},
+        {"id": "deployment-07", "question": "What is the cluster of DEP-2107?", "expected": "prod-c"},
+        {"id": "deployment-08", "question": "What is the strategy of DEP-2109?", "expected": "recreate"}
+      ]
+    },
+    {
+      "name": "capacity_lookup",
+      "shared_prefix": "You are a deterministic capacity inventory lookup service. Use only the inventory rows below. Return exactly the requested field value with no explanation, label, quotation marks, or punctuation.\n\nCapacity inventory:\nNODE-301 | pool=inference-east | gpu=RTX-5070 | memory_gib=12 | batch_limit=8 | state=ready\nNODE-302 | pool=inference-west | gpu=L4 | memory_gib=24 | batch_limit=16 | state=draining\nNODE-303 | pool=training-lab | gpu=RTX-4090 | memory_gib=24 | batch_limit=4 | state=ready\nNODE-304 | pool=embedding-core | gpu=A10 | memory_gib=24 | batch_limit=32 | state=maintenance\nNODE-305 | pool=inference-east | gpu=RTX-4070Ti | memory_gib=12 | batch_limit=6 | state=ready\nNODE-306 | pool=vision-batch | gpu=L40S | memory_gib=48 | batch_limit=12 | state=ready\nNODE-307 | pool=training-lab | gpu=A6000 | memory_gib=48 | batch_limit=3 | state=reserved\nNODE-308 | pool=embedding-core | gpu=T4 | memory_gib=16 | batch_limit=24 | state=draining\nNODE-309 | pool=inference-west | gpu=RTX-5080 | memory_gib=16 | batch_limit=10 | state=ready\nNODE-310 | pool=vision-batch | gpu=A30 | memory_gib=24 | batch_limit=14 | state=maintenance\nNODE-311 | pool=inference-east | gpu=RTX-5090 | memory_gib=32 | batch_limit=12 | state=reserved\nNODE-312 | pool=inference-west | gpu=L40 | memory_gib=48 | batch_limit=18 | state=ready",
+      "cases": [
+        {"id": "capacity-01", "question": "What is the gpu of NODE-301?", "expected": "RTX-5070"},
+        {"id": "capacity-02", "question": "What is the memory_gib value of NODE-306?", "expected": "48"},
+        {"id": "capacity-03", "question": "What is the pool of NODE-308?", "expected": "embedding-core"},
+        {"id": "capacity-04", "question": "What is the state of NODE-307?", "expected": "reserved"},
+        {"id": "capacity-05", "question": "What is the batch_limit value of NODE-312?", "expected": "18"},
+        {"id": "capacity-06", "question": "What is the gpu of NODE-310?", "expected": "A30"},
+        {"id": "capacity-07", "question": "What is the state of NODE-302?", "expected": "draining"},
+        {"id": "capacity-08", "question": "What is the pool of NODE-311?", "expected": "inference-east"}
+      ]
+    }
+  ]
+}

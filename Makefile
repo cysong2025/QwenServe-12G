@@ -5,7 +5,7 @@ E02_BUDGET ?= 8192
 E02_SERVE_CONFIG = configs/serve/e02_batch_tokens_$(E02_BUDGET).toml
 E02_MATRIX_CONFIG = configs/matrix/e02_batch_tokens_$(E02_BUDGET).toml
 
-.PHONY: doctor collect-env repair-bench-deps download-model-modelscope render-baseline render-baseline-local serve-baseline serve-baseline-local render-prefix render-baseline-matrix bench-smoke bench-baseline bench-baseline-matrix summarize-pilot summarize render-e02 render-e02-local serve-e02 serve-e02-local render-e02-matrix bench-e02-pilot bench-e02-matrix summarize-e02 compare-e02 render-e04-off-local render-e04-on-local serve-e04-off-local serve-e04-on-local render-e04-off-matrix render-e04-on-matrix bench-e04-off-pilot bench-e04-on-pilot bench-e04-off-matrix bench-e04-on-matrix bench-e04-off-capacity bench-e04-on-capacity summarize-e04 compare-e04 diagnose-e04 test
+.PHONY: doctor collect-env repair-bench-deps download-model-modelscope render-baseline render-baseline-local serve-baseline serve-baseline-local render-prefix render-baseline-matrix bench-smoke bench-baseline bench-baseline-matrix summarize-pilot summarize render-e02 render-e02-local serve-e02 serve-e02-local render-e02-matrix bench-e02-pilot bench-e02-matrix summarize-e02 compare-e02 render-e04-off-local render-e04-on-local serve-e04-off-local serve-e04-on-local render-e04-off-matrix render-e04-on-matrix bench-e04-off-pilot bench-e04-on-pilot bench-e04-off-matrix bench-e04-on-matrix bench-e04-off-capacity bench-e04-on-capacity summarize-e04 compare-e04 diagnose-e04 run-e04-canary-off run-e04-canary-on compare-e04-canary test
 
 doctor:
 	$(QSL) doctor
@@ -127,6 +127,15 @@ compare-e04:
 
 diagnose-e04:
 	$(QSL) diagnose-e04 --runs-csv reports/e04_prefix_cache/runs.csv --output-dir reports/e04_prefix_cache
+
+run-e04-canary-off:
+	$(QSL) run-e04-canary --state off
+
+run-e04-canary-on:
+	$(QSL) run-e04-canary --state on
+
+compare-e04-canary:
+	$(QSL) compare-e04-canary
 
 test:
 	PYTHONPATH=src $(PYTHON) -m unittest discover -s tests -v
