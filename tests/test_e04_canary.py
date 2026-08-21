@@ -90,7 +90,9 @@ class E04CanaryTests(unittest.TestCase):
 
             self.assertTrue(passed)
             self.assertTrue(json_path.is_file())
-            self.assertIn("Status: **PASS**", markdown_path.read_text())
+            report = markdown_path.read_text()
+            self.assertIn("Overall status: **PASS**", report)
+            self.assertIn("APC equivalence: **PASS**", report)
 
     def test_output_mismatch_fails_canary_comparison(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -144,6 +146,56 @@ class E04CanaryTests(unittest.TestCase):
             )
 
             self.assertFalse(passed)
+
+    def test_identical_wrong_answers_pass_equivalence_but_fail_quality(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            common = {
+                "kind": "e04_correctness_canary",
+                "dataset_sha256": "a" * 64,
+                "valid": True,
+                "results": [
+                    {
+                        "id": "one",
+                        "group": "lookup",
+                        "prompt_sha256": "b" * 64,
+                        "expected": "A",
+                        "generated": "wrong",
+                        "expected_match": False,
+                    }
+                ],
+            }
+            off_path = root / "off.json"
+            on_path = root / "on.json"
+            off_path.write_text(json.dumps({**common, "state": "off"}))
+            on_path.write_text(
+                json.dumps(
+                    {
+                        **common,
+                        "state": "on",
+                        "prefix_metrics": {
+                            "query_tokens": 100,
+                            "hit_tokens": 80,
+                            "hit_rate_percent": 80,
+                        },
+                    }
+                )
+            )
+
+            json_path, markdown_path, passed = compare_e04_canary(
+                result_root=root,
+                output_dir=root / "report",
+                off_result=off_path,
+                on_result=on_path,
+            )
+
+            summary = json.loads(json_path.read_text())
+            self.assertFalse(passed)
+            self.assertEqual(summary["apc_equivalence_status"], "PASS")
+            self.assertEqual(summary["task_quality_status"], "FAIL")
+            report = markdown_path.read_text()
+            self.assertIn("APC equivalence: **PASS**", report)
+            self.assertIn("| one | A | wrong | wrong |", report)
 
 
 if __name__ == "__main__":

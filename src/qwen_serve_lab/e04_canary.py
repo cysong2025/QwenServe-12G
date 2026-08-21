@@ -298,6 +298,9 @@ def compare_e04_canary(
                 "id": identifier,
                 "group": off_row.get("group") or on_row.get("group"),
                 "prompt_match": prompt_match,
+                "expected": off_row.get("expected") or on_row.get("expected"),
+                "off_generated": off_row.get("generated"),
+                "on_generated": on_row.get("generated"),
                 "off_expected_match": bool(off_row.get("expected_match")),
                 "on_expected_match": bool(on_row.get("expected_match")),
                 "output_match": output_match,
@@ -317,17 +320,24 @@ def compare_e04_canary(
         and on_metrics["hit_tokens"] > 0
     )
     count = len(row_evidence)
-    passed = bool(
+    input_evidence_valid = bool(
         count > 0
         and off.get("dataset_sha256") == on.get("dataset_sha256")
         and off.get("valid") is True
         and on.get("valid") is True
         and prompt_matches == count
+    )
+    equivalence_passed = bool(
+        input_evidence_valid
         and output_matches == count
-        and off_expected_matches == count
-        and on_expected_matches == count
         and on_cache_exercised
     )
+    quality_passed = bool(
+        input_evidence_valid
+        and off_expected_matches == count
+        and on_expected_matches == count
+    )
+    passed = equivalence_passed and quality_passed
     summary = {
         "schema_version": 1,
         "kind": "e04_correctness_canary_comparison",
@@ -344,6 +354,9 @@ def compare_e04_canary(
             on_metrics.get("hit_rate_percent") if isinstance(on_metrics, dict) else None
         ),
         "on_cache_exercised": on_cache_exercised,
+        "apc_equivalence_status": "PASS" if equivalence_passed else "FAIL",
+        "task_quality_status": "PASS" if quality_passed else "FAIL",
+        "overall_status": "PASS" if passed else "FAIL",
         "status": "PASS" if passed else "FAIL",
         "results": row_evidence,
     }
@@ -362,7 +375,9 @@ def compare_e04_canary(
         "",
         f"Generated at: {summary['created_at']}",
         "",
-        f"Status: **{summary['status']}**",
+        f"Overall status: **{summary['overall_status']}**",
+        f"APC equivalence: **{summary['apc_equivalence_status']}**",
+        f"Task quality: **{summary['task_quality_status']}**",
         "",
         f"Dataset SHA-256 match: {'YES' if summary['dataset_sha256_match'] else 'NO'}",
         f"Prompt matches: {prompt_matches}/{count}",
@@ -385,5 +400,26 @@ def compare_e04_canary(
                 output="MATCH" if row["output_match"] else "MISMATCH",
             )
         )
+    failures = [
+        row
+        for row in row_evidence
+        if not row["off_expected_match"] or not row["on_expected_match"]
+    ]
+    if failures:
+        lines.extend(
+            [
+                "",
+                "## Task Quality Failures",
+                "",
+                "| Case | Expected | OFF generated | ON generated |",
+                "|---|---|---|---|",
+            ]
+        )
+        for row in failures:
+            cells = [
+                str(row[key]).replace("|", "\\|").replace("\n", "<br>")
+                for key in ("id", "expected", "off_generated", "on_generated")
+            ]
+            lines.append("| " + " | ".join(cells) + " |")
     markdown_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return json_path, markdown_path, passed

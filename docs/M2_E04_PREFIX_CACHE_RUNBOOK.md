@@ -199,6 +199,11 @@ canary 的 `PASS` 门槛是：数据集哈希一致、24/24 prompt 一致、OFF 
 大于零。若比较命令返回非零，报告仍会生成；保留报告并先检查失败项，不要重跑正式
 性能矩阵。
 
+报告将总门槛拆成两个独立证据：`APC Equivalence` 要求输入完全配对、ON 实际命中
+缓存且 OFF/ON 输出全部一致；`Task Quality` 要求两侧均命中全部人工预期答案。
+`Overall` 只有在两者都 PASS 时才通过。两侧以相同方式答错会保持 Overall FAIL，
+但不会被误报成 APC 导致的输出回归。
+
 只提交可重建的小型报告，不提交原始 benchmark JSON、Prometheus snapshot 或 telemetry：
 
 ```bash
