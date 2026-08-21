@@ -103,6 +103,7 @@ class ServeConfig:
     enable_per_request_metrics: bool
     wsl2_enable_pin_memory: bool
     use_flashinfer_sampler: bool
+    attention_backend: str | None = None
     enable_chunked_prefill: bool | None = None
     seed: int | None = None
     calculate_kv_scales: bool = False
@@ -135,6 +136,14 @@ class ServeConfig:
         if calculate_kv_scales is None:
             calculate_kv_scales = False
         kv_cache_dtype = _required(server, "kv_cache_dtype", str)
+        attention_backend = server.get("attention_backend")
+        if attention_backend is not None:
+            if (
+                not isinstance(attention_backend, str)
+                or not attention_backend.strip()
+            ):
+                raise ConfigError("attention_backend must be a non-empty string")
+            attention_backend = attention_backend.strip().upper()
         if calculate_kv_scales and not kv_cache_dtype.startswith("fp8"):
             raise ConfigError(
                 "calculate_kv_scales=true requires an FP8 kv_cache_dtype"
@@ -183,6 +192,7 @@ class ServeConfig:
             use_flashinfer_sampler=_required(
                 server, "use_flashinfer_sampler", bool
             ),
+            attention_backend=attention_backend,
             enable_chunked_prefill=enable_chunked_prefill,
             seed=seed,
             calculate_kv_scales=calculate_kv_scales,

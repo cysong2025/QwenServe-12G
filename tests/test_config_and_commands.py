@@ -176,10 +176,16 @@ class ServeConfigTests(unittest.TestCase):
         self.assertEqual(fp8.kv_cache_dtype, "fp8_e4m3")
         self.assertFalse(bf16.calculate_kv_scales)
         self.assertTrue(fp8.calculate_kv_scales)
+        self.assertEqual(bf16.attention_backend, "TRITON_ATTN")
+        self.assertEqual(fp8.attention_backend, "TRITON_ATTN")
         self.assertEqual(bf16.seed, 20260821)
         self.assertEqual(bf16.max_num_batched_tokens, 8192)
         fp8_command = build_serve_command(fp8)
         self.assertIn("--calculate-kv-scales", fp8_command)
+        attention_index = fp8_command.index("--attention-config")
+        self.assertEqual(
+            fp8_command[attention_index + 1], '{"backend":"TRITON_ATTN"}'
+        )
         self.assertIn("--seed", fp8_command)
         controlled_fields = (
             "model",
@@ -199,6 +205,7 @@ class ServeConfigTests(unittest.TestCase):
             "enable_per_request_metrics",
             "wsl2_enable_pin_memory",
             "use_flashinfer_sampler",
+            "attention_backend",
         )
         for field in controlled_fields:
             self.assertEqual(getattr(bf16, field), getattr(fp8, field))

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import math
 import shlex
 
@@ -51,6 +52,16 @@ def build_serve_command(config: ServeConfig) -> list[str]:
         command.extend(["--seed", str(config.seed)])
     if config.calculate_kv_scales:
         command.append("--calculate-kv-scales")
+    if config.attention_backend is not None:
+        command.extend(
+            [
+                "--attention-config",
+                json.dumps(
+                    {"backend": config.attention_backend},
+                    separators=(",", ":"),
+                ),
+            ]
+        )
     command.append(
         "--enable-prefix-caching"
         if config.enable_prefix_caching

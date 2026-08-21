@@ -22,6 +22,7 @@ max_model_len=8192
 gpu_memory_utilization=0.82
 max_num_seqs=16
 max_num_batched_tokens=8192
+attention_backend=TRITON_ATTN
 enable_prefix_caching=false
 enable_chunked_prefill=true
 seed=20260821
@@ -48,6 +49,17 @@ vLLM 0.25.1 的在线 scale 只使用一次随机 token warmup batch，随后固
 `max_num_seqs=16`。这项修订只降低瞬时激活显存压力，不改变实验的唯一主要
 自变量（KV cache dtype）。旧配置产生的 OOM 日志和 partial manifest 作为预实验
 证据保留，但由于 server config SHA-256 已改变，不得混入正式配对比较。
+
+2026-08-22 的第二次预实验表明，自动选择的 FlashInfer backend 在 RTX 5070
+`sm120` 上能完成 FP8 KV cache 分配，但在 FP8 prefill JIT warmup 阶段无法正确
+识别 CUDA capability，最终报错 `FlashInfer requires GPUs with sm75 or higher`。此错误
+不表示 `sm120` 低于 `sm75`，而是 FlashInfer 0.6.13 的 JIT/toolkit 检测路径与
+当前 WSL CUDA 环境不兼容。
+
+vLLM 0.25.1 的 Triton attention backend 支持 CUDA `SM89+` 上的 FP8 KV cache。因此
+正式 BF16/FP8 配置同步固定为 `TRITON_ATTN`，避免 attention backend 成为
+额外自变量。修订前采集的 FlashInfer BF16 结果不能与 Triton FP8 结果配对，
+必须归档并在新 server config SHA-256 下重跑两侧。
 
 ## 3. 性能与容量判据
 
