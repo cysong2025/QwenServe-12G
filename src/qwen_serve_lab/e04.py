@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import csv
+import json
 import re
 import statistics
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -290,6 +292,134 @@ def compare_e04_runs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             }
         )
     return comparisons
+
+
+def _load_generated_texts(path: str | Path) -> list[str]:
+    result_path = Path(path)
+    try:
+        data = json.loads(result_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ResultError(f"Cannot read vLLM result {result_path}: {exc}") from exc
+    generated_texts = data.get("generated_texts") if isinstance(data, dict) else None
+    if not isinstance(generated_texts, list) or not all(
+        isinstance(text, str) for text in generated_texts
+    ):
+        raise ResultError(f"Detailed generated_texts are missing from {result_path}")
+    return generated_texts
+
+
+def diagnose_e04_outputs(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, int, int], dict[str, dict[str, Any]]] = {}
+    for row in rows:
+        key = (
+            row["condition"],
+            row["max_concurrency"],
+            row["effective_seed"],
+        )
+        states = grouped.setdefault(key, {})
+        if row["state"] in states:
+            raise ResultError(
+                "Duplicate E04 output diagnostic row for "
+                f"{row['condition']} c{row['max_concurrency']} "
+                f"seed {row['effective_seed']} state {row['state']}"
+            )
+        states[row["state"]] = row
+
+    diagnostics: list[dict[str, Any]] = []
+    for (condition, concurrency, seed), states in sorted(grouped.items()):
+        if set(states) != {"off", "on"}:
+            raise ResultError(
+                f"E04 output diagnostic pair is incomplete for {condition} "
+                f"c{concurrency} seed {seed}"
+            )
+        off_row = states["off"]
+        on_row = states["on"]
+        off_texts = _load_generated_texts(off_row["result_file"])
+        on_texts = _load_generated_texts(on_row["result_file"])
+        denominator = max(len(off_texts), len(on_texts))
+        positional_matches = sum(
+            off_text == on_text
+            for off_text, on_text in zip(off_texts, on_texts)
+        )
+        multiset_matches = sum(
+            (Counter(off_texts) & Counter(on_texts)).values()
+        )
+        positional_rate = (
+            positional_matches / denominator * 100 if denominator else 100.0
+        )
+        multiset_rate = (
+            multiset_matches / denominator * 100 if denominator else 100.0
+        )
+        diagnostics.append(
+            {
+                "condition": condition,
+                "max_concurrency": concurrency,
+                "repetition": off_row["repetition"],
+                "effective_seed": seed,
+                "off_result_file": off_row["result_file"],
+                "on_result_file": on_row["result_file"],
+                "off_output_count": len(off_texts),
+                "on_output_count": len(on_texts),
+                "positional_matches": positional_matches,
+                "positional_match_percent": positional_rate,
+                "multiset_matches": multiset_matches,
+                "multiset_match_percent": multiset_rate,
+                "exact_positional_match": off_texts == on_texts,
+                "exact_multiset_match": Counter(off_texts) == Counter(on_texts),
+            }
+        )
+    return diagnostics
+
+
+def write_e04_output_diagnostics(
+    runs_csv: str | Path,
+    output_dir: str | Path,
+) -> tuple[Path, Path]:
+    diagnostics = diagnose_e04_outputs(load_e04_runs(runs_csv))
+    destination = Path(output_dir)
+    destination.mkdir(parents=True, exist_ok=True)
+    csv_path = destination / "output_diagnostics.csv"
+    markdown_path = destination / "output_diagnostics.md"
+
+    with csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(diagnostics[0]))
+        writer.writeheader()
+        writer.writerows(diagnostics)
+
+    exact_pairs = sum(row["exact_multiset_match"] for row in diagnostics)
+    total_positional_matches = sum(row["positional_matches"] for row in diagnostics)
+    total_multiset_matches = sum(row["multiset_matches"] for row in diagnostics)
+    total_outputs = sum(
+        max(row["off_output_count"], row["on_output_count"])
+        for row in diagnostics
+    )
+    lines = [
+        "# E04 Output Diagnostics",
+        "",
+        f"Generated at: {datetime.now(timezone.utc).isoformat()}",
+        "",
+        "This diagnostic reads existing detailed result JSON files only; it does not run the model.",
+        "The multiset metric ignores completion order, while the positional metric compares each request slot.",
+        "",
+        f"Exact multiset-matching pairs: {exact_pairs}/{len(diagnostics)}",
+        f"Positional matches: {total_positional_matches}/{total_outputs}",
+        f"Multiset overlap: {total_multiset_matches}/{total_outputs}",
+        "",
+        "| Condition | C | Rep | Seed | OFF/ON outputs | Positional match | Multiset overlap | Exact multiset |",
+        "|---|---:|---:|---:|---:|---:|---:|---|",
+    ]
+    for row in diagnostics:
+        lines.append(
+            "| {condition} | {max_concurrency} | {repetition} | "
+            "{effective_seed} | {off_output_count}/{on_output_count} | "
+            "{positional_matches} ({positional_match_percent:.2f}%) | "
+            "{multiset_matches} ({multiset_match_percent:.2f}%) | {exact} |".format(
+                **row,
+                exact="YES" if row["exact_multiset_match"] else "NO",
+            )
+        )
+    markdown_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return csv_path, markdown_path
 
 
 def _format(value: float | None, digits: int = 2) -> str:

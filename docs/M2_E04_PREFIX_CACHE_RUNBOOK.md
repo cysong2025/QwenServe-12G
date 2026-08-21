@@ -152,6 +152,18 @@ awk -F, 'NR==1 {for(i=1;i<=NF;i++){if($i=="profile")p=i;if($i=="valid")v=i}next}
 grep -E 'INCOMPLETE|MISMATCH|UNKNOWN' reports/e04_prefix_cache/comparison.md || true
 ```
 
+如果 comparison 出现 `Output=MISMATCH`，不要据此宣布 E04 完成，也不要直接放宽
+输出一致性门槛。先对已经保存的 detailed JSON 做纯 CPU 诊断：
+
+```bash
+make diagnose-e04
+sed -n '1,260p' reports/e04_prefix_cache/output_diagnostics.md
+```
+
+该命令不会启动模型。`Positional match` 比较相同请求位置，`Multiset overlap`
+忽略异步完成顺序；后者仍低于 100% 表示生成文本内容确有差异，需要先区分少量数值
+非确定性与输入批次未对齐，再决定是否重跑或修正实验设计。
+
 只提交可重建的小型报告，不提交原始 benchmark JSON、Prometheus snapshot 或 telemetry：
 
 ```bash

@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import csv
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
-from qwen_serve_lab.e04 import compare_e04_runs, write_e04_comparison
+from qwen_serve_lab.e04 import (
+    compare_e04_runs,
+    diagnose_e04_outputs,
+    write_e04_comparison,
+    write_e04_output_diagnostics,
+)
 
 
 def sample_rows() -> list[dict[str, object]]:
@@ -81,6 +87,42 @@ class E04ComparisonTests(unittest.TestCase):
         self.assertEqual(comparison["evidence"], "INCOMPLETE")
         self.assertFalse(comparison["output_match"])
         self.assertEqual(comparison["decision"], "UNKNOWN")
+
+    def test_output_diagnostic_distinguishes_order_and_content(self) -> None:
+        rows = sample_rows()[:2]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            off_path = root / "off.json"
+            on_path = root / "on.json"
+            off_path.write_text(json.dumps({"generated_texts": ["a", "b", "c"]}))
+            on_path.write_text(json.dumps({"generated_texts": ["b", "a", "x"]}))
+            rows[0]["result_file"] = str(off_path)
+            rows[1]["result_file"] = str(on_path)
+
+            diagnostic = diagnose_e04_outputs(rows)[0]
+
+        self.assertEqual(diagnostic["positional_matches"], 0)
+        self.assertEqual(diagnostic["multiset_matches"], 2)
+        self.assertFalse(diagnostic["exact_multiset_match"])
+
+    def test_output_diagnostic_writes_csv_and_markdown(self) -> None:
+        rows = sample_rows()[:2]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            result_path = root / "result.json"
+            result_path.write_text(json.dumps({"generated_texts": ["a", "b"]}))
+            for row in rows:
+                row["result_file"] = str(result_path)
+            runs_csv = root / "runs.csv"
+            with runs_csv.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+                writer.writeheader()
+                writer.writerows(rows)
+
+            csv_path, markdown_path = write_e04_output_diagnostics(runs_csv, root)
+
+            self.assertTrue(csv_path.is_file())
+            self.assertIn("Exact multiset-matching pairs: 1/1", markdown_path.read_text())
 
 
 if __name__ == "__main__":

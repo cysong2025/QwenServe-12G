@@ -18,7 +18,10 @@ from qwen_serve_lab.commands import (
     render_shell_command,
 )
 from qwen_serve_lab.comparison import write_e02_comparison
-from qwen_serve_lab.e04 import write_e04_comparison
+from qwen_serve_lab.e04 import (
+    write_e04_comparison,
+    write_e04_output_diagnostics,
+)
 from qwen_serve_lab.config import (
     BenchmarkConfig,
     BenchmarkMatrix,
@@ -140,6 +143,17 @@ def _parser() -> argparse.ArgumentParser:
         default=Path("reports/e04_prefix_cache/runs.csv"),
     )
     compare_e04.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e04_prefix_cache")
+    )
+    diagnose_e04 = subparsers.add_parser(
+        "diagnose-e04", help="Measure paired E04 generated-output overlap"
+    )
+    diagnose_e04.add_argument(
+        "--runs-csv",
+        type=Path,
+        default=Path("reports/e04_prefix_cache/runs.csv"),
+    )
+    diagnose_e04.add_argument(
         "--output-dir", type=Path, default=Path("reports/e04_prefix_cache")
     )
     return parser
@@ -640,6 +654,14 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "compare-e04":
             csv_path, markdown_path = write_e04_comparison(
+                args.runs_csv,
+                args.output_dir,
+            )
+            print(csv_path)
+            print(markdown_path)
+            return 0
+        if args.command == "diagnose-e04":
+            csv_path, markdown_path = write_e04_output_diagnostics(
                 args.runs_csv,
                 args.output_dir,
             )

@@ -21,8 +21,9 @@
 Stage 0、M1 BF16 基线和 M2 E02 batch token budget 实验已在目标
 RTX 5070 上完成。E02 包含 4 个 budget、6 种负载形状和 72 次有效
 benchmark，并已生成可重建的差值和运行状态报告。E04 prefix reuse
-sweep 的配对矩阵、缓存命中率证据采集和输出一致性校验已经实现，等待在目标 GPU
-执行正式实验。
+sweep 的 36 次正式 benchmark 已在目标 GPU 执行并上传汇总；性能和缓存命中率
+证据完整，但 OFF/ON 生成文本哈希不一致，当前正在进行输出差异诊断，尚未形成正式
+E04 结论。
 
 ```text
 docs/                 项目章程、可行性与实验协议
