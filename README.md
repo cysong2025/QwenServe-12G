@@ -18,12 +18,11 @@
 
 ## 当前状态
 
-Stage 0、M1 BF16 基线和 M2 E02 batch token budget 实验已在目标
-RTX 5070 上完成。E02 包含 4 个 budget、6 种负载形状和 72 次有效
-benchmark，并已生成可重建的差值和运行状态报告。E04 prefix reuse
-sweep 的 36 次正式 benchmark 已在目标 GPU 执行并上传汇总；性能和缓存命中率
-证据完整，但 OFF/ON 生成文本哈希不一致，当前正在进行输出差异诊断，尚未形成正式
-E04 结论。
+Stage 0、M1 BF16 基线、M2 E02 batch token budget 和 E04 prefix reuse
+实验已在目标 RTX 5070 上完成。E02 包含 4 个 budget、6 种负载形状和 72 次
+有效 benchmark。E04 包含 12 个 profile、36 次有效 benchmark、1800 条随机
+输出诊断和 24 条固定自然语言 canary；结论状态为 `COMPLETE_WITH_LIMITATIONS`，
+因为原始随机-token逐字一致性门槛失败，但固定 canary 的 APC 等价性为 24/24 PASS。
 
 ```text
 docs/                 项目章程、可行性与实验协议
@@ -123,6 +122,8 @@ E04 的 OFF/ON 配对、缓存隔离、实际 token 命中率采集和正式矩�
 [E04 Automatic Prefix Caching 实验手册](docs/M2_E04_PREFIX_CACHE_RUNBOOK.md)。
 随机 token 输出不完全一致时，手册中的 correctness canary 使用固定自然语言数据集
 独立验证 prompt、预期答案、OFF/ON 输出和实际 prefix cache hit，不需要重跑性能矩阵。
+完整数据解读、协议偏差和可复现结论见
+[E04 实验结果](docs/E04_RESULTS.md)。
 
 详细边界和验收标准见 [项目章程](docs/PROJECT_CHARTER.md)、[可行性分析](docs/FEASIBILITY.md) 与 [实验协议](docs/EXPERIMENT_PROTOCOL.md)。
 

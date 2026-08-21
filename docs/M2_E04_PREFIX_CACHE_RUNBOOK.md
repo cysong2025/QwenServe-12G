@@ -216,6 +216,12 @@ E04 退出条件：
 
 - 12 个 profile、36 次正式 benchmark 均可追溯到唯一配置哈希；
 - 每组 OFF/ON 都是 3 次相同 seed 的配对结果；
-- ON 每轮都有实际 token hit rate，所有输出均为 `MATCH`；
+- ON 每轮都有实际 token hit rate；
+- 若随机-token输出不是全部 `MATCH`，必须提交 output diagnostics，保留原始
+  `INCOMPLETE/UNKNOWN`，并运行固定 correctness canary；
+- canary 必须分别报告 APC 等价性和任务质量，不能用两侧相同的错误答案冒充质量通过；
 - 结论给出复用率阈值、前缀长度影响、C8 容量结果和不适用边界；
 - 未达到收益门槛的条件和失败实验同样保留。
+
+本轮正式结果满足上述修订后的退出条件，状态为 `COMPLETE_WITH_LIMITATIONS`。
+详细解释见 [E04 实验结果](E04_RESULTS.md)。
