@@ -18,18 +18,45 @@
 
 ## 当前状态
 
-Stage 0、M1 BF16 基线、M2 E02 batch token budget、E04 prefix reuse 和 E05
-FP8 KV Cache 已在目标 RTX 5070 上完成。E02 包含 72 次有效 benchmark；E04
-包含 36 次性能 benchmark、1800 条随机输出诊断和 24 条固定自然语言 canary，
-结论状态为 `COMPLETE_WITH_LIMITATIONS`。
+**E01-E06 单卡推理优化里程碑已完成。** 项目在目标 RTX 5070 上完成
+228 次独立正式 benchmark、22,800 个计时请求、固定正确性 canary、
+FP8 自动质量评测和 50 对匿名人工复核。提交证据通过结构化审计：
 
-E05 包含 12 个 profile、36 次有效 benchmark、BF16/FP8 各 50 条固定质量请求和
-50 对匿名人工复核。FP8 KV token capacity 为 BF16 的 2.009x，但 schema 通过率
-从 92% 降至 70%，匿名人工均分从 3.680 降至 3.120，因此状态为
-`COMPLETE_WITH_QUALITY_REGRESSION`，FP8 不进入后续默认组合配置。
+```text
+Overall status: PASS
+Milestone status: E01_E06_COMPLETE
+Unique formal benchmark runs: 228
+```
 
-E06 已冻结 `8192/2048 batch token budget x APC OFF/ON` 的 2x2 因子设计、
-48-run 配对矩阵、固定 canary 和交互效应比较器，等待目标 GPU 执行。
+E03 的长度 x 并发问题由 E01 的完整 3x4 矩阵覆盖，不重复计数。E01
+原计划的 Transformers 单请求参考未执行，因此项目不声称跨引擎加速比。
+E04 保留随机-token严格输出门槛的限制，E05 保留 FP8 质量回归失败，
+这些负面结果均没有被重新定义为成功优化。
+
+E07 QLoRA/LoRA serving 和 E08 token-aware 准入控制属于后续里程碑，
+不在本次 E01-E06 完成范围内。
+
+## 核心结果
+
+| 实验 | 证据 | 结论 |
+|---|---:|---|
+| E01/E03 容量 | 36 runs | 12 个 profile 中 8 个通过 SLO；Long-C8/C16 吞吐增长但 goodput 下降 |
+| E02 batch budget | 72 runs | 2048 相对 8192 将 Long-C4/C8 TTFT 降低 21.23%/47.74%，吞吐基本持平 |
+| E04 APC | 36 runs | 约 46% actual hit 时 TTFT -24.20%；79% hit/C8 时 TTFT -55.11% 且 SLO 恢复 |
+| E05 FP8 KV | 36 runs | KV 容量 2.009x，但 schema 92%->70%、匿名人工均分 3.680->3.120，不推荐默认部署 |
+| E06 组合 | 48 runs | 叠加收益在 reuse50-P1024/C4 和 reuse90-P1792/C8 成立，24/24 canary 一致 |
+
+完整数据解读、部署建议、故障诊断和有效性边界见
+[E01-E06 最终技术报告](docs/E01_E06_FINAL_REPORT.md)。
+简历表述、面试深挖点和禁止过度宣称的边界见
+[E01-E06 面试讲述指南](docs/INTERVIEW_GUIDE_E01_E06.md)。
+
+克隆仓库后可不依赖 GPU 审计已提交证据：
+
+```bash
+make test
+make audit-e01-e06
+```
 
 ```text
 docs/                 项目章程、可行性与实验协议
@@ -92,7 +119,7 @@ make serve-baseline-local
 
 WSL2 中 vLLM V2 Model Runner 需要 pinned memory/UVA。受控服务配置会显式设置 `VLLM_WSL2_ENABLE_PIN_MEMORY=1`，并将该环境覆盖写入 server manifest；不需要手工 `export`。
 
-RTX 5070 的 Blackwell `sm120` 架构会触发 vLLM 0.25.1 所带 FlashInfer 采样器的架构识别错误：明明高于 `sm75`，启动时仍报告 `FlashInfer requires GPUs with sm75 or higher`。两个受控 profile 固定设置 `VLLM_USE_FLASHINFER_SAMPLER=0`，仅将 top-k/top-p 采样回退到 PyTorch 原生实现；其余推理路径保持不变。该值同样记录在 server manifest 中。
+RTX 5070 的 Blackwell `sm120` 架构会触发 vLLM 0.25.1 所带 FlashInfer 采样器的架构识别错误：明明高于 `sm75`，启动时仍报告 `FlashInfer requires GPUs with sm75 or higher`。所有受控服务配置都固定设置 `VLLM_USE_FLASHINFER_SAMPLER=0`，仅将 top-k/top-p 采样回退到 PyTorch 原生实现；其余推理路径保持不变。该值同样记录在 server manifest 中。
 
 若已有环境在运行 `vllm bench serve` 时报告 `pyarrow` 缺少 `PyExtensionType`，执行 `make repair-bench-deps`。项目将 PyArrow 固定为 20.0.0；21.0.0 删除了旧版 `datasets` 仍需使用的 API。修复后 `make doctor` 的 `vllm-bench` 检查必须 PASS。
 
@@ -125,6 +152,9 @@ E02 的 budget 切换、启动门槛和可恢复矩阵流程见
 完整数据解读、有效性限制和可复现结论见
 [E02 实验结果](docs/E02_RESULTS.md)。
 
+E01 基线与 E03 容量拐点的结果见
+[E01/E03 实验结果](docs/E01_E03_RESULTS.md)。
+
 E04 的 OFF/ON 配对、缓存隔离、实际 token 命中率采集和正式矩阵步骤见
 [E04 Automatic Prefix Caching 实验手册](docs/M2_E04_PREFIX_CACHE_RUNBOOK.md)。
 随机 token 输出不完全一致时，手册中的 correctness canary 使用固定自然语言数据集
@@ -139,6 +169,7 @@ E05 的 BF16/FP8 分时启动、长上下文配对矩阵、KV token capacity、�
 
 E06 的四 cell 分时执行、组合收益门槛、因子交互和固定 canary 步骤见
 [E06 组合优化实验手册](docs/M3_E06_COMBINED_RUNBOOK.md)。
+完整结果和部署决策见 [E06 实验结果](docs/E06_RESULTS.md)。
 
 详细边界和验收标准见 [项目章程](docs/PROJECT_CHARTER.md)、[可行性分析](docs/FEASIBILITY.md) 与 [实验协议](docs/EXPERIMENT_PROTOCOL.md)。
 

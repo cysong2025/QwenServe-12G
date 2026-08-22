@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "kind": "e01_e06_evidence_audit",
+  "created_at": "2026-08-22T11:59:37.208896+00:00",
+  "overall_status": "PASS",
+  "milestone_status": "E01_E06_COMPLETE",
+  "total_benchmark_runs": 228,
+  "stages": [
+    {
+      "id": "E01",
+      "status": "COMPLETE_WITH_PROTOCOL_DEVIATION",
+      "benchmark_runs": 36,
+      "profiles": 12,
+      "slo_pass_profiles": 8,
+      "slo_fail_profiles": 4,
+      "checks": {
+        "run_count": true,
+        "profile_count": true,
+        "three_repetitions_per_profile": true,
+        "all_runs_valid": true,
+        "all_error_rates_below_one_percent": true,
+        "all_requests_complete": true,
+        "baseline_shapes_complete": true,
+        "baseline_concurrencies_complete": true,
+        "expected_slo_boundary": true
+      },
+      "protocol_deviation": "Transformers single-request reference not executed"
+    },
+    {
+      "id": "E02",
+      "status": "COMPLETE",
+      "benchmark_runs": 72,
+      "profiles": 24,
+      "budgets": [
+        2048,
+        4096,
+        8192,
+        16384
+      ],
+      "checks": {
+        "run_count": true,
+        "profile_count": true,
+        "three_repetitions_per_profile": true,
+        "all_runs_valid": true,
+        "all_error_rates_below_one_percent": true,
+        "all_requests_complete": true,
+        "four_budgets": true,
+        "comparison_rows": true,
+        "comparison_evidence_valid": true,
+        "long_c8_is_slo_boundary": true
+      }
+    },
+    {
+      "id": "E03",
+      "status": "COVERED_BY_E01",
+      "benchmark_runs": 0,
+      "profiles": 0,
+      "shared_evidence": "E01 length-by-concurrency matrix",
+      "checks": {
+        "three_workload_shapes": true,
+        "four_concurrency_levels": true,
+        "shared_runs_not_double_counted": true
+      }
+    },
+    {
+      "id": "E04",
+      "status": "COMPLETE_WITH_LIMITATIONS",
+      "benchmark_runs": 36,
+      "profiles": 12,
+      "canary_output_matches": "24/24",
+      "canary_task_accuracy": "22/24",
+      "checks": {
+        "run_count": true,
+        "profile_count": true,
+        "three_repetitions_per_profile": true,
+        "all_runs_valid": true,
+        "all_error_rates_below_one_percent": true,
+        "all_requests_complete": true,
+        "paired_comparison_rows": true,
+        "strict_random_output_gate_preserved": true,
+        "canary_dataset_matches": true,
+        "canary_outputs_match": true,
+        "apc_equivalence_passes": true,
+        "cache_exercised": true,
+        "shared_base_errors_preserved": true
+      }
+    },
+    {
+      "id": "E05",
+      "status": "COMPLETE_WITH_QUALITY_REGRESSION",
+      "benchmark_runs": 36,
+      "profiles": 12,
+      "fp8_capacity_ratio": 2.0094920899250623,
+      "automated_quality_status": "FAIL",
+      "human_quality_status": "FAIL",
+      "checks": {
+        "run_count": true,
+        "profile_count": true,
+        "three_repetitions_per_profile": true,
+        "all_runs_valid": true,
+        "all_error_rates_below_one_percent": true,
+        "all_requests_complete": true,
+        "capacity_evidence_valid": true,
+        "capacity_gate_passes": true,
+        "quality_dataset_complete": true,
+        "automated_regression_preserved": true,
+        "human_review_complete": true,
+        "human_regression_preserved": true
+      }
+    },
+    {
+      "id": "E06",
+      "status": "COMPLETE",
+      "benchmark_runs": 48,
+      "profiles": 16,
+      "stacked_benefit_conditions": [
+        "capacity_reuse90_p1792",
+        "reuse50_p1024"
+      ],
+      "canary_output_matches": "24/24",
+      "checks": {
+        "run_count": true,
+        "profile_count": true,
+        "three_repetitions_per_profile": true,
+        "all_runs_valid": true,
+        "all_error_rates_below_one_percent": true,
+        "all_requests_complete": true,
+        "four_factorial_conditions": true,
+        "factorial_evidence_valid": true,
+        "combined_slo_passes": true,
+        "expected_stacked_conditions": true,
+        "canary_passes": true,
+        "canary_outputs_match": true,
+        "apc_cells_exercised_cache": true,
+        "oom_headroom_revision_frozen": true
+      }
+    }
+  ]
+}

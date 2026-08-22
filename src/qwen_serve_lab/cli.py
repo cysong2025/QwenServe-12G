@@ -34,6 +34,7 @@ from qwen_serve_lab.e05_quality import (
 )
 from qwen_serve_lab.e06 import write_e06_comparison
 from qwen_serve_lab.e06_canary import compare_e06_canary, run_e06_canary
+from qwen_serve_lab.final_audit import write_e01_e06_audit
 from qwen_serve_lab.config import (
     BenchmarkConfig,
     BenchmarkMatrix,
@@ -313,6 +314,13 @@ def _parser() -> argparse.ArgumentParser:
     )
     compare_e06_canary_parser.add_argument(
         "--output-dir", type=Path, default=Path("reports/e06_combined")
+    )
+    audit_e01_e06_parser = subparsers.add_parser(
+        "audit-e01-e06", help="Audit all committed E01-E06 evidence"
+    )
+    audit_e01_e06_parser.add_argument("--root", type=Path, default=Path("."))
+    audit_e01_e06_parser.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e01_e06")
     )
     return parser
 
@@ -964,6 +972,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "compare-e06-canary":
             json_path, markdown_path, passed = compare_e06_canary(
                 result_root=args.result_root,
+                output_dir=args.output_dir,
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0 if passed else 2
+        if args.command == "audit-e01-e06":
+            json_path, markdown_path, passed = write_e01_e06_audit(
+                repo_root=args.root,
                 output_dir=args.output_dir,
             )
             print(json_path)
