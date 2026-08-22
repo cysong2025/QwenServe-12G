@@ -23,6 +23,8 @@ Stage 0、M1 BF16 基线、M2 E02 batch token budget 和 E04 prefix reuse
 有效 benchmark。E04 包含 12 个 profile、36 次有效 benchmark、1800 条随机
 输出诊断和 24 条固定自然语言 canary；结论状态为 `COMPLETE_WITH_LIMITATIONS`，
 因为原始随机-token逐字一致性门槛失败，但固定 canary 的 APC 等价性为 24/24 PASS。
+M3 E05 FP8 KV Cache 的受控服务配置、12-profile 长上下文矩阵、启动容量解析器、
+50 条 AI Infra 质量集和匿名人工复核流程已经冻结，等待目标 GPU 执行。
 
 ```text
 docs/                 项目章程、可行性与实验协议
@@ -125,6 +127,10 @@ E04 的 OFF/ON 配对、缓存隔离、实际 token 命中率采集和正式矩�
 完整数据解读、协议偏差和可复现结论见
 [E04 实验结果](docs/E04_RESULTS.md)。
 
+E05 的 BF16/FP8 分时启动、长上下文配对矩阵、KV token capacity、自动质量门槛和
+50 条匿名人工复核步骤见
+[E05 FP8 KV Cache 实验手册](docs/M3_E05_FP8_KV_CACHE_RUNBOOK.md)。
+
 详细边界和验收标准见 [项目章程](docs/PROJECT_CHARTER.md)、[可行性分析](docs/FEASIBILITY.md) 与 [实验协议](docs/EXPERIMENT_PROTOCOL.md)。
 
 ## 依据
@@ -133,4 +139,5 @@ E04 的 OFF/ON 配对、缓存隔离、实际 token 命中率采集和正式矩�
 - [vLLM GPU 与 WSL 安装要求](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/)
 - [vLLM serve 参数](https://docs.vllm.ai/en/latest/cli/serve/)
 - [vLLM bench serve 参数](https://docs.vllm.ai/en/latest/cli/bench/serve/)
+- [vLLM 0.25.1 Quantized KV Cache](https://docs.vllm.ai/en/v0.25.1/features/quantization/quantized_kvcache/)
 - [NVIDIA CUDA on WSL 指南](https://docs.nvidia.com/cuda/wsl-user-guide/index.html)

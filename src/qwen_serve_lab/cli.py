@@ -23,6 +23,15 @@ from qwen_serve_lab.e04 import (
     write_e04_output_diagnostics,
 )
 from qwen_serve_lab.e04_canary import compare_e04_canary, run_e04_canary
+from qwen_serve_lab.e05 import (
+    write_e05_capacity_report,
+    write_e05_comparison,
+)
+from qwen_serve_lab.e05_quality import (
+    compare_e05_quality,
+    run_e05_quality,
+    summarize_e05_human_review,
+)
 from qwen_serve_lab.config import (
     BenchmarkConfig,
     BenchmarkMatrix,
@@ -188,6 +197,75 @@ def _parser() -> argparse.ArgumentParser:
     compare_e04_canary_parser.add_argument(
         "--output-dir", type=Path, default=Path("reports/e04_prefix_cache")
     )
+    compare_e05 = subparsers.add_parser(
+        "compare-e05", help="Compare paired E05 BF16/FP8 performance runs"
+    )
+    compare_e05.add_argument(
+        "--runs-csv",
+        type=Path,
+        default=Path("reports/e05_kv_cache/runs.csv"),
+    )
+    compare_e05.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e05_kv_cache")
+    )
+    capacity_e05 = subparsers.add_parser(
+        "capacity-e05", help="Parse E05 KV capacity from server startup logs"
+    )
+    capacity_e05.add_argument(
+        "--manifest-dir", type=Path, default=Path("artifacts/env")
+    )
+    capacity_e05.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e05_kv_cache")
+    )
+    run_e05_quality_parser = subparsers.add_parser(
+        "run-e05-quality", help="Run the fixed 50-case E05 quality set"
+    )
+    run_e05_quality_parser.add_argument(
+        "--state", choices=("bf16", "fp8"), required=True
+    )
+    run_e05_quality_parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=Path("datasets/e05_ai_infra_quality.json"),
+    )
+    run_e05_quality_parser.add_argument(
+        "--result-root",
+        type=Path,
+        default=Path("artifacts/results/e05_quality"),
+    )
+    run_e05_quality_parser.add_argument(
+        "--base-url", default="http://127.0.0.1:8000"
+    )
+    run_e05_quality_parser.add_argument(
+        "--served-model-name", default="qwen2.5-3b-instruct"
+    )
+    compare_e05_quality_parser = subparsers.add_parser(
+        "compare-e05-quality", help="Compare latest BF16/FP8 E05 quality runs"
+    )
+    compare_e05_quality_parser.add_argument(
+        "--result-root",
+        type=Path,
+        default=Path("artifacts/results/e05_quality"),
+    )
+    compare_e05_quality_parser.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e05_kv_cache")
+    )
+    human_e05 = subparsers.add_parser(
+        "summarize-e05-human-review", help="Unblind and summarize E05 human scores"
+    )
+    human_e05.add_argument(
+        "--review-csv",
+        type=Path,
+        default=Path("reports/e05_kv_cache/human_review.csv"),
+    )
+    human_e05.add_argument(
+        "--review-key",
+        type=Path,
+        default=Path("reports/e05_kv_cache/human_review_key.json"),
+    )
+    human_e05.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e05_kv_cache")
+    )
     return parser
 
 
@@ -304,6 +382,7 @@ def _run_server(config_path: Path, model_path: Path | None = None) -> int:
         "log": str(log_path),
         "returncode": None,
         "stopped_by_user": False,
+        "unexpected_exit": None,
     }
     write_json(manifest, manifest_path)
     print(f"Server manifest: {manifest_path}")
@@ -349,21 +428,46 @@ def _run_server(config_path: Path, model_path: Path | None = None) -> int:
             _clear_active_server(process.pid)
 
     manifest["returncode"] = returncode
+    manifest["unexpected_exit"] = not manifest["stopped_by_user"]
     write_json(manifest, manifest_path)
+    if manifest["unexpected_exit"] and returncode == 0:
+        print(
+            "Model server exited without a user stop; treating the clean process "
+            "exit as a service failure",
+            file=sys.stderr,
+        )
+        return 1
     return returncode
 
 
-def _execute_benchmark(config: BenchmarkConfig) -> int:
+def _execute_benchmark(
+    config: BenchmarkConfig, repetitions: list[int] | None = None
+) -> int:
     active_server = _verify_active_server(config)
     config.result_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    selected_repetitions = (
+        list(range(1, config.repetitions + 1))
+        if repetitions is None
+        else list(repetitions)
+    )
+    expected_repetitions = set(range(1, config.repetitions + 1))
+    if (
+        not selected_repetitions
+        or len(selected_repetitions) != len(set(selected_repetitions))
+        or not set(selected_repetitions).issubset(expected_repetitions)
+    ):
+        raise ConfigError(
+            "Benchmark repetitions must be unique values between 1 and "
+            f"{config.repetitions}"
+        )
     commands = [
         build_benchmark_command(config, repetition=index)
-        for index in range(1, config.repetitions + 1)
+        for index in selected_repetitions
     ]
     prewarm_commands = [
         build_prewarm_command(config, repetition=index)
-        for index in range(1, config.repetitions + 1)
+        for index in selected_repetitions
     ]
     manifest = {
         "schema_version": 1,
@@ -380,16 +484,38 @@ def _execute_benchmark(config: BenchmarkConfig) -> int:
             render_shell_command(command) if command is not None else None
             for command in prewarm_commands
         ],
+        "requested_repetitions": selected_repetitions,
         "runs": [],
     }
     manifest_path = Path("artifacts/env") / f"{timestamp}-{config.profile_name}.json"
     write_json(manifest, manifest_path)
     print(f"Environment manifest: {manifest_path}")
 
-    for index, (prewarm_command, command) in enumerate(
-        zip(prewarm_commands, commands, strict=True), start=1
+    run_items = list(
+        zip(selected_repetitions, prewarm_commands, commands, strict=True)
+    )
+    for position, (index, prewarm_command, command) in enumerate(
+        run_items, start=1
     ):
         print(f"Running repetition {index}/{config.repetitions}")
+        if position > 1:
+            try:
+                _verify_active_server(config)
+            except ConfigError as exc:
+                manifest["runs"].append(
+                    {
+                        "repetition": index,
+                        "effective_seed": config.seed_for_repetition(index),
+                        "returncode": 2,
+                        "execution_error": str(exc),
+                        "failed_stage": "server_check",
+                        "prewarm_returncode": None,
+                        "result_files": [],
+                    }
+                )
+                write_json(manifest, manifest_path)
+                print(str(exc), file=sys.stderr)
+                return 2
         prewarm_returncode = None
         prewarm_execution_error = None
         if prewarm_command is not None:
@@ -536,7 +662,7 @@ def _execute_benchmark(config: BenchmarkConfig) -> int:
                 file=sys.stderr,
             )
             return 2
-        if index < config.repetitions and config.cooldown_seconds:
+        if position < len(run_items) and config.cooldown_seconds:
             time.sleep(config.cooldown_seconds)
     return 0
 
@@ -576,9 +702,12 @@ def _run_matrix(
             raise ConfigError(f"Unknown matrix profile(s): {', '.join(unknown)}")
         configs = [config for config in configs if config.profile_name in selected_set]
 
+    work_items = [
+        (config, list(range(1, config.repetitions + 1))) for config in configs
+    ]
     if skip_completed and Path("artifacts/env").is_dir():
         records = load_records_from_manifests("artifacts/env")
-        pending: list[BenchmarkConfig] = []
+        pending: list[tuple[BenchmarkConfig, list[int]]] = []
         for config in configs:
             repetitions = {
                 record.repetition
@@ -599,15 +728,23 @@ def _run_matrix(
                     f"({config.repetitions}/{config.repetitions} valid repetitions)"
                 )
             else:
-                pending.append(config)
-        configs = pending
+                missing = sorted(expected - repetitions)
+                if repetitions:
+                    completed = ",".join(str(value) for value in sorted(repetitions))
+                    missing_text = ",".join(str(value) for value in missing)
+                    print(
+                        f"Resuming matrix profile: {config.profile_name}; "
+                        f"valid repetitions={completed}, missing={missing_text}"
+                    )
+                pending.append((config, missing))
+        work_items = pending
 
-    for index, config in enumerate(configs, start=1):
-        print(f"Matrix profile {index}/{len(configs)}: {config.profile_name}")
-        returncode = _execute_benchmark(config)
+    for index, (config, repetitions) in enumerate(work_items, start=1):
+        print(f"Matrix profile {index}/{len(work_items)}: {config.profile_name}")
+        returncode = _execute_benchmark(config, repetitions=repetitions)
         if returncode != 0:
             return returncode
-        if index < len(configs) and config.cooldown_seconds:
+        if index < len(work_items) and config.cooldown_seconds:
             time.sleep(config.cooldown_seconds)
     return 0
 
@@ -714,6 +851,47 @@ def main(argv: list[str] | None = None) -> int:
             json_path, markdown_path, passed = compare_e04_canary(
                 result_root=args.result_root,
                 output_dir=args.output_dir,
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0 if passed else 2
+        if args.command == "compare-e05":
+            csv_path, markdown_path = write_e05_comparison(
+                args.runs_csv, args.output_dir
+            )
+            print(csv_path)
+            print(markdown_path)
+            return 0
+        if args.command == "capacity-e05":
+            json_path, markdown_path = write_e05_capacity_report(
+                args.manifest_dir, args.output_dir
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0
+        if args.command == "run-e05-quality":
+            output_path, valid = run_e05_quality(
+                state=args.state,
+                dataset_path=args.dataset,
+                result_root=args.result_root,
+                base_url=args.base_url,
+                served_model_name=args.served_model_name,
+            )
+            print(output_path)
+            return 0 if valid else 2
+        if args.command == "compare-e05-quality":
+            json_path, markdown_path, passed = compare_e05_quality(
+                result_root=args.result_root,
+                output_dir=args.output_dir,
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0 if passed else 2
+        if args.command == "summarize-e05-human-review":
+            json_path, markdown_path, passed = summarize_e05_human_review(
+                args.review_csv,
+                args.review_key,
+                args.output_dir,
             )
             print(json_path)
             print(markdown_path)

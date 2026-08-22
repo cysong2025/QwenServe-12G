@@ -103,7 +103,10 @@ class ServeConfig:
     enable_per_request_metrics: bool
     wsl2_enable_pin_memory: bool
     use_flashinfer_sampler: bool
+    attention_backend: str | None = None
     enable_chunked_prefill: bool | None = None
+    seed: int | None = None
+    calculate_kv_scales: bool = False
     local_model_path: Path | None = None
     local_model_manifest_sha256: str | None = None
 
@@ -126,6 +129,25 @@ class ServeConfig:
         max_model_len = _positive_int(server, "max_model_len")
         max_num_batched_tokens = _positive_int(server, "max_num_batched_tokens")
         enable_chunked_prefill = _optional_bool(server, "enable_chunked_prefill")
+        seed = (
+            _nonnegative_int(server, "seed") if "seed" in server else None
+        )
+        calculate_kv_scales = _optional_bool(server, "calculate_kv_scales")
+        if calculate_kv_scales is None:
+            calculate_kv_scales = False
+        kv_cache_dtype = _required(server, "kv_cache_dtype", str)
+        attention_backend = server.get("attention_backend")
+        if attention_backend is not None:
+            if (
+                not isinstance(attention_backend, str)
+                or not attention_backend.strip()
+            ):
+                raise ConfigError("attention_backend must be a non-empty string")
+            attention_backend = attention_backend.strip().upper()
+        if calculate_kv_scales and not kv_cache_dtype.startswith("fp8"):
+            raise ConfigError(
+                "calculate_kv_scales=true requires an FP8 kv_cache_dtype"
+            )
         if (
             max_num_batched_tokens < max_model_len
             and enable_chunked_prefill is not True
@@ -157,7 +179,7 @@ class ServeConfig:
             gpu_memory_utilization=gpu_memory_utilization,
             max_num_seqs=_positive_int(server, "max_num_seqs"),
             max_num_batched_tokens=max_num_batched_tokens,
-            kv_cache_dtype=_required(server, "kv_cache_dtype", str),
+            kv_cache_dtype=kv_cache_dtype,
             enable_prefix_caching=_required(
                 server, "enable_prefix_caching", bool
             ),
@@ -170,7 +192,10 @@ class ServeConfig:
             use_flashinfer_sampler=_required(
                 server, "use_flashinfer_sampler", bool
             ),
+            attention_backend=attention_backend,
             enable_chunked_prefill=enable_chunked_prefill,
+            seed=seed,
+            calculate_kv_scales=calculate_kv_scales,
         )
 
     def with_local_model(self, path: str | Path) -> "ServeConfig":

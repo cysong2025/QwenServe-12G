@@ -168,6 +168,59 @@ class ServeConfigTests(unittest.TestCase):
         for field in controlled_fields:
             self.assertEqual(getattr(off, field), getattr(on, field))
 
+    def test_e05_server_profiles_change_only_kv_quantization(self) -> None:
+        bf16 = ServeConfig.from_file(ROOT / "configs/serve/e05_kv_bf16.toml")
+        fp8 = ServeConfig.from_file(ROOT / "configs/serve/e05_kv_fp8.toml")
+
+        self.assertEqual(bf16.kv_cache_dtype, "bfloat16")
+        self.assertEqual(fp8.kv_cache_dtype, "fp8_e4m3")
+        self.assertFalse(bf16.calculate_kv_scales)
+        self.assertTrue(fp8.calculate_kv_scales)
+        self.assertEqual(bf16.attention_backend, "TRITON_ATTN")
+        self.assertEqual(fp8.attention_backend, "TRITON_ATTN")
+        self.assertEqual(bf16.seed, 20260821)
+        self.assertEqual(bf16.max_num_batched_tokens, 8192)
+        fp8_command = build_serve_command(fp8)
+        self.assertIn("--calculate-kv-scales", fp8_command)
+        attention_index = fp8_command.index("--attention-config")
+        self.assertEqual(
+            fp8_command[attention_index + 1], '{"backend":"TRITON_ATTN"}'
+        )
+        self.assertIn("--seed", fp8_command)
+        controlled_fields = (
+            "model",
+            "revision",
+            "served_model_name",
+            "host",
+            "port",
+            "dtype",
+            "generation_config",
+            "max_model_len",
+            "gpu_memory_utilization",
+            "max_num_seqs",
+            "max_num_batched_tokens",
+            "seed",
+            "enable_prefix_caching",
+            "enable_chunked_prefill",
+            "enable_per_request_metrics",
+            "wsl2_enable_pin_memory",
+            "use_flashinfer_sampler",
+            "attention_backend",
+        )
+        for field in controlled_fields:
+            self.assertEqual(getattr(bf16, field), getattr(fp8, field))
+
+    def test_kv_scale_calculation_requires_fp8(self) -> None:
+        config_text = (ROOT / "configs/serve/e05_kv_bf16.toml").read_text()
+        config_text = config_text.replace(
+            "calculate_kv_scales = false", "calculate_kv_scales = true"
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "invalid.toml"
+            path.write_text(config_text)
+            with self.assertRaises(ConfigError):
+                ServeConfig.from_file(path)
+
     def test_small_batch_budget_requires_chunked_prefill(self) -> None:
         config_text = (
             ROOT / "configs/serve/e02_batch_tokens_2048.toml"
@@ -307,6 +360,24 @@ class BenchmarkConfigTests(unittest.TestCase):
         self.assertEqual(config.nominal_reuse_percent, 90)
         self.assertEqual(config.seed, 20260821 + 50000)
 
+    def test_e05_matrices_are_paired_long_context_workloads(self) -> None:
+        bf16 = BenchmarkMatrix.from_file(
+            ROOT / "configs/matrix/e05_kv_bf16.toml"
+        )
+        fp8 = BenchmarkMatrix.from_file(
+            ROOT / "configs/matrix/e05_kv_fp8.toml"
+        )
+
+        self.assertEqual(len(bf16.configs), 6)
+        self.assertEqual(len(fp8.configs), 6)
+        for control, treatment in zip(bf16.configs, fp8.configs, strict=True):
+            self.assertEqual(control.input_len, treatment.input_len)
+            self.assertEqual(control.output_len, treatment.output_len)
+            self.assertEqual(control.max_concurrency, treatment.max_concurrency)
+            self.assertEqual(control.seed, treatment.seed)
+            self.assertEqual(control.repetition_seed_stride, 100)
+            self.assertEqual(control.seed_for_repetition(3), control.seed + 200)
+
     def test_matrix_resume_skips_three_matching_valid_repetitions(self) -> None:
         matrix_path = ROOT / "configs/matrix/baseline.toml"
         config = BenchmarkMatrix.from_file(matrix_path).configs[0]
@@ -343,6 +414,45 @@ class BenchmarkConfigTests(unittest.TestCase):
 
         self.assertEqual(returncode, 0)
         execute.assert_not_called()
+
+    def test_matrix_resume_runs_only_missing_repetitions(self) -> None:
+        matrix_path = ROOT / "configs/matrix/baseline.toml"
+        config = BenchmarkMatrix.from_file(matrix_path).configs[0]
+        records = [
+            SimpleNamespace(
+                profile=config.profile_name,
+                benchmark_config_sha256=config.source_sha256,
+                server_config_sha256=config.server_config_sha256,
+                input_len=config.input_len,
+                output_len=config.output_len,
+                max_concurrency=config.max_concurrency,
+                completed=config.num_prompts,
+                failed=0,
+                valid=True,
+                repetition=1,
+            )
+        ]
+
+        with (
+            patch("qwen_serve_lab.cli.Path.is_dir", return_value=True),
+            patch(
+                "qwen_serve_lab.cli.load_records_from_manifests",
+                return_value=records,
+            ),
+            patch("qwen_serve_lab.cli._execute_benchmark", return_value=0) as execute,
+        ):
+            returncode = _run_matrix(
+                matrix_path,
+                [config.profile_name],
+                tokenizer_path=None,
+                skip_completed=True,
+            )
+
+        self.assertEqual(returncode, 0)
+        execute.assert_called_once()
+        called_config = execute.call_args.args[0]
+        self.assertEqual(called_config.profile_name, config.profile_name)
+        self.assertEqual(execute.call_args.kwargs["repetitions"], [2, 3])
 
     def test_benchmark_requires_matching_active_server(self) -> None:
         config = BenchmarkMatrix.from_file(
