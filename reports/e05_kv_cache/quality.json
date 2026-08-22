@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "kind": "e05_quality_comparison",
+  "created_at": "2026-08-22T04:18:36.006894+00:00",
+  "bf16_result": "artifacts/results/e05_quality/bf16/20260821T165123Z-e05-quality-bf16.json",
+  "fp8_result": "artifacts/results/e05_quality/fp8/20260821T173913Z-e05-quality-fp8.json",
+  "dataset_sha256_match": true,
+  "cases": 50,
+  "prompt_matches": 50,
+  "raw_output_matches": 2,
+  "bf16": {
+    "schema_pass_rate": 0.92,
+    "root_cause_macro_f1": 0.719083139083139,
+    "action_micro_f1": 0.5208333333333334,
+    "dangerous_command_rate": 0.0
+  },
+  "fp8": {
+    "schema_pass_rate": 0.7,
+    "root_cause_macro_f1": 0.5698407148407149,
+    "action_micro_f1": 0.36470588235294116,
+    "dangerous_command_rate": 0.0
+  },
+  "baseline_quality_status": "FAIL",
+  "no_material_regression_status": "FAIL",
+  "automated_status": "FAIL",
+  "human_review_status": "FAIL",
+  "overall_status": "FAIL",
+  "human_review_csv": "reports/e05_kv_cache/human_review.csv",
+  "human_review_key": "reports/e05_kv_cache/human_review_key.json",
+  "human_review_summary": "reports/e05_kv_cache/human_review_summary.json",
+  "human_review": {
+    "cases": 50,
+    "bf16_mean_score": 3.68,
+    "fp8_mean_score": 3.12,
+    "fp8_minus_bf16": -0.56,
+    "preferences": {
+      "bf16": 20,
+      "fp8": 5,
+      "tie": 25
+    },
+    "status": "FAIL"
+  },
+  "finalized_at": "2026-08-22T04:18:36.058132+00:00"
+}

@@ -1,6 +1,6 @@
 # E05 FP8 KV Cache Performance Comparison
 
-Generated at: 2026-08-21T18:27:15.863447+00:00
+Generated at: 2026-08-22T04:18:35.897586+00:00
 
 BF16 and FP8 use paired seeds and identical workload controls. Quality is evaluated separately and is not inferred from this table.
 

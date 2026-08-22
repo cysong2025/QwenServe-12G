@@ -1,6 +1,6 @@
 # E05 KV Cache Capacity
 
-Generated at: 2026-08-21T18:27:15.970355+00:00
+Generated at: 2026-08-22T04:18:35.955661+00:00
 
 Capacity gate: **PASS** (required ratio >= 1.80x)
 Capacity values are parsed from vLLM startup logs under identical memory and scheduler controls.

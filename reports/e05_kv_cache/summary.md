@@ -1,6 +1,6 @@
 # Benchmark Summary
 
-Generated at: 2026-08-21T18:27:15.795180+00:00
+Generated at: 2026-08-22T04:18:35.844359+00:00
 
 Metrics are median [minimum, maximum] across repetitions; peak VRAM is the maximum observed sample.
 Evidence is VALID when three consistent runs have complete telemetry and error rate below 1%; SLO PASS requires every repetition to meet both P95 limits.

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "kind": "e05_kv_capacity_comparison",
+  "created_at": "2026-08-22T04:18:35.955661+00:00",
+  "rows": [
+    {
+      "state": "bf16",
+      "server_profile": "e05_kv_bf16",
+      "manifest": "artifacts/env/20260821T164352Z-server-e05_kv_bf16.json",
+      "log": "/home/user/projects/QwenServe-12G/artifacts/server/20260821T164352Z-e05_kv_bf16.log",
+      "server_config_sha256": "6d17340cd2f44b87f8e358e1051787717e802d991807f28e05215655c9528b96",
+      "kv_cache_dtype": "bfloat16",
+      "gpu_kv_cache_tokens": 96080,
+      "reference_request_tokens": 8192,
+      "maximum_concurrency": 11.73
+    },
+    {
+      "state": "fp8",
+      "server_profile": "e05_kv_fp8",
+      "manifest": "artifacts/env/20260821T173203Z-server-e05_kv_fp8.json",
+      "log": "/home/user/projects/QwenServe-12G/artifacts/server/20260821T173203Z-e05_kv_fp8.log",
+      "server_config_sha256": "67537ad49ff00f5447ec42ed698c2d49bed7b70fe55f53ab245980b41c3cc2cf",
+      "kv_cache_dtype": "fp8_e4m3",
+      "gpu_kv_cache_tokens": 193072,
+      "reference_request_tokens": 8192,
+      "maximum_concurrency": 23.57
+    }
+  ],
+  "fp8_to_bf16_token_capacity_ratio": 2.0094920899250623,
+  "fp8_to_bf16_maximum_concurrency_ratio": 2.0093776641091217,
+  "evidence_status": "VALID",
+  "capacity_status": "PASS"
+}
