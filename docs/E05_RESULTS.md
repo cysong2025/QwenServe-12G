@@ -112,12 +112,11 @@ FP8-BF16 平均分差为 `-0.560`，而冻结门槛只允许 FP8 最多低 `0.10
 > 因而当前 FP8 KV Cache 配置的结论是“容量收益成立、部分性能收益成立、质量
 > 门槛失败”，不推荐用于质量敏感的默认部署。
 
-使用 WSL 中保留的原始 artifacts 可重建报告：
+使用 WSL 中保留的原始 artifacts 可一次性重建并验证报告：
 
 ```bash
-make summarize-e05
-make compare-e05
-make capacity-e05
-make compare-e05-quality || true
-make summarize-e05-human-review || true
+make finalize-e05
 ```
+
+该目标接受自动质量或人工质量门槛返回的状态码 2，因为 FAIL 也是有效
+实验结论；缺失 artifacts、报告生成失败或 `runs.csv` 不是 36 行时仍会失败。

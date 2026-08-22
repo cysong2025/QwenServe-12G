@@ -2,6 +2,7 @@
 
 正式实验结论见 `docs/E05_RESULTS.md`。当前 E05 状态为
 `COMPLETE_WITH_QUALITY_REGRESSION`：容量门槛通过，自动质量和匿名人工质量门槛失败。
+已有 artifacts 的环境可执行 `make finalize-e05` 重建并验证全部正式报告。
 
 ## 1. 实验问题
 
