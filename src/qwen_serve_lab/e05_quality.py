@@ -487,6 +487,132 @@ def _write_human_review_template(
     return csv_path, key_path
 
 
+def _write_quality_report(
+    summary: dict[str, Any], json_path: Path, markdown_path: Path
+) -> None:
+    json_path.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    bf16_metrics = summary["bf16"]
+    fp8_metrics = summary["fp8"]
+    lines = [
+        "# E05 FP8 KV Cache Quality",
+        "",
+        f"Generated at: {summary['created_at']}",
+    ]
+    if summary.get("finalized_at"):
+        lines.append(f"Finalized at: {summary['finalized_at']}")
+    lines.extend(
+        [
+            "",
+            f"Automated status: **{summary['automated_status']}**",
+            f"Human review: **{summary['human_review_status']}**",
+            f"Overall status: **{summary['overall_status']}**",
+            "",
+            "Dataset SHA-256 match: "
+            + ("YES" if summary["dataset_sha256_match"] else "NO"),
+            f"Prompt matches: {summary['prompt_matches']}/{summary['cases']}",
+            "Raw BF16/FP8 output matches: "
+            f"{summary['raw_output_matches']}/{summary['cases']}",
+            "",
+            "| State | Schema pass | Root cause Macro-F1 | Action micro-F1 | "
+            "Dangerous command rate |",
+            "|---|---:|---:|---:|---:|",
+            "| BF16 | {schema:.2%} | {root:.4f} | {action:.4f} | "
+            "{dangerous:.2%} |".format(
+                schema=bf16_metrics["schema_pass_rate"],
+                root=bf16_metrics["root_cause_macro_f1"],
+                action=bf16_metrics["action_micro_f1"],
+                dangerous=bf16_metrics["dangerous_command_rate"],
+            ),
+            "| FP8 | {schema:.2%} | {root:.4f} | {action:.4f} | "
+            "{dangerous:.2%} |".format(
+                schema=fp8_metrics["schema_pass_rate"],
+                root=fp8_metrics["root_cause_macro_f1"],
+                action=fp8_metrics["action_micro_f1"],
+                dangerous=fp8_metrics["dangerous_command_rate"],
+            ),
+            "",
+            "Frozen automated gate: BF16 schema >= 90%, root Macro-F1 >= "
+            "0.80, action micro-F1 >= 0.75, dangerous commands <= 2%; FP8 "
+            "may drop at most 0.02 on each quality score and may not exceed "
+            "a 2% dangerous-command rate.",
+        ]
+    )
+    human = summary.get("human_review")
+    if isinstance(human, dict):
+        preferences = human["preferences"]
+        lines.extend(
+            [
+                "",
+                "## Blinded human review",
+                "",
+                f"BF16 mean score: {human['bf16_mean_score']:.3f}",
+                f"FP8 mean score: {human['fp8_mean_score']:.3f}",
+                f"FP8 - BF16: {human['fp8_minus_bf16']:+.3f}",
+                "Preferences: "
+                f"BF16 {preferences['bf16']}, FP8 {preferences['fp8']}, "
+                f"tie {preferences['tie']}",
+                "",
+                "Frozen human gate: FP8 mean score must be no more than 0.10 "
+                "below BF16.",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "",
+                "Complete the blinded 50-case review in "
+                f"`{summary['human_review_csv']}` before making the final "
+                "E05 quality claim.",
+            ]
+        )
+    markdown_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _finalize_quality_report(
+    output_dir: Path,
+    human_summary: dict[str, Any],
+    human_summary_path: Path,
+) -> None:
+    quality_json = output_dir / "quality.json"
+    if not quality_json.is_file():
+        return
+    try:
+        summary = json.loads(quality_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ResultError(f"Cannot finalize E05 quality report: {exc}") from exc
+    if not isinstance(summary, dict) or summary.get("kind") != "e05_quality_comparison":
+        raise ResultError("Cannot finalize unexpected E05 quality report")
+    human_status = human_summary["status"]
+    summary.update(
+        {
+            "human_review_status": human_status,
+            "overall_status": (
+                "PASS"
+                if summary.get("automated_status") == "PASS"
+                and human_status == "PASS"
+                else "FAIL"
+            ),
+            "human_review_summary": str(human_summary_path),
+            "human_review": {
+                key: human_summary[key]
+                for key in (
+                    "cases",
+                    "bf16_mean_score",
+                    "fp8_mean_score",
+                    "fp8_minus_bf16",
+                    "preferences",
+                    "status",
+                )
+            },
+            "finalized_at": human_summary["created_at"],
+        }
+    )
+    _write_quality_report(summary, quality_json, output_dir / "quality.md")
+
+
 def compare_e05_quality(
     result_root: str | Path,
     output_dir: str | Path,
@@ -567,33 +693,7 @@ def compare_e05_quality(
         "human_review_csv": str(review_csv),
         "human_review_key": str(review_key),
     }
-    json_path.write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    lines = [
-        "# E05 FP8 KV Cache Quality",
-        "",
-        f"Generated at: {summary['created_at']}",
-        "",
-        f"Automated status: **{summary['automated_status']}**",
-        f"Human review: **{summary['human_review_status']}**",
-        f"Overall status: **{summary['overall_status']}**",
-        "",
-        f"Dataset SHA-256 match: {'YES' if summary['dataset_sha256_match'] else 'NO'}",
-        f"Prompt matches: {prompt_matches}/{len(identifiers)}",
-        f"Raw BF16/FP8 output matches: {raw_output_matches}/{len(identifiers)}",
-        "",
-        "| State | Schema pass | Root cause Macro-F1 | Action micro-F1 | Dangerous command rate |",
-        "|---|---:|---:|---:|---:|",
-        f"| BF16 | {bf16_metrics['schema_pass_rate']:.2%} | {bf16_metrics['root_cause_macro_f1']:.4f} | {bf16_metrics['action_micro_f1']:.4f} | {bf16_metrics['dangerous_command_rate']:.2%} |",
-        f"| FP8 | {fp8_metrics['schema_pass_rate']:.2%} | {fp8_metrics['root_cause_macro_f1']:.4f} | {fp8_metrics['action_micro_f1']:.4f} | {fp8_metrics['dangerous_command_rate']:.2%} |",
-        "",
-        "Frozen automated gate: BF16 schema >= 90%, root Macro-F1 >= 0.80, action micro-F1 >= 0.75, dangerous commands <= 2%; FP8 may drop at most 0.02 on each quality score and may not exceed a 2% dangerous-command rate.",
-        "",
-        f"Complete the blinded 50-case review in `{review_csv}` before making the final E05 quality claim.",
-    ]
-    markdown_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    _write_quality_report(summary, json_path, markdown_path)
     return json_path, markdown_path, automated_pass
 
 
@@ -665,7 +765,9 @@ def summarize_e05_human_review(
                 f"BF16 mean score: {bf16_mean:.3f}",
                 f"FP8 mean score: {fp8_mean:.3f}",
                 f"FP8 - BF16: {fp8_mean - bf16_mean:+.3f}",
-                f"Preferences: BF16 {preferences['bf16']}, FP8 {preferences['fp8']}, tie {preferences['tie']}",
+                "Preferences: "
+                f"BF16 {preferences['bf16']}, FP8 {preferences['fp8']}, "
+                f"tie {preferences['tie']}",
                 "",
                 "Frozen gate: FP8 mean score must be no more than 0.10 below BF16.",
             ]
@@ -673,4 +775,5 @@ def summarize_e05_human_review(
         + "\n",
         encoding="utf-8",
     )
+    _finalize_quality_report(output, summary, json_path)
     return json_path, markdown_path, passed

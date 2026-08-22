@@ -151,6 +151,13 @@ class E05QualityTests(unittest.TestCase):
                 root / "report",
             )
             self.assertTrue(human_passed)
+            finalized = json.loads(json_path.read_text())
+            self.assertEqual(finalized["human_review_status"], "PASS")
+            self.assertEqual(finalized["overall_status"], "PASS")
+            self.assertEqual(finalized["human_review"]["cases"], 50)
+            quality_markdown = (root / "report/quality.md").read_text()
+            self.assertIn("Human review: **PASS**", quality_markdown)
+            self.assertIn("## Blinded human review", quality_markdown)
 
 
 if __name__ == "__main__":
