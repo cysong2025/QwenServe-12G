@@ -31,7 +31,7 @@ revision=a1d308dfcc03e09da285d49d912439a655a571e8
 dtype=bfloat16
 kv_cache_dtype=bfloat16
 max_model_len=8192
-gpu_memory_utilization=0.82
+gpu_memory_utilization=0.78
 max_num_seqs=8
 enable_chunked_prefill=true
 attention_backend=TRITON_ATTN
@@ -40,6 +40,14 @@ seed=20260823
 
 使用 `TRITON_ATTN` 是为了让四组共享已经在 RTX 5070 `sm120` 上验证过的后端，
 避免自动后端选择成为隐藏变量。E06 不使用 FP8，也不计算 KV scales。
+
+2026-08-22 的 `8192/APC OFF` 预实验在 `gpu_memory_utilization=0.82`
+下可重复触发 OOM。`CUDA_LAUNCH_BLOCKING=1` 将原先异步上报的
+`cudaErrorUnknown` 定位为 6145-token 调度步中的 130 MiB activation
+分配失败。因此四个 cell 在正式实验前统一将该值修订为 `0.78`，
+为 activation 和 CUDA Graph private pool 保留运行时余量。该修订不改变
+`8192 vs 2048` 和 `APC OFF vs ON` 两个实验因子。`0.82` 下的诊断
+记录只作为可行性证据，不得混入正式汇总。
 
 ## 3. 工作负载与证据数量
 

@@ -430,6 +430,15 @@ class BenchmarkConfigTests(unittest.TestCase):
             "e06_bt8192_apc_on",
             "e06_bt2048_apc_on",
         )
+        server_configs = [
+            ServeConfig.from_file(ROOT / f"configs/serve/{name}.toml")
+            for name in matrix_names
+        ]
+        self.assertEqual(
+            {config.gpu_memory_utilization for config in server_configs},
+            {0.78},
+        )
+
         matrices = [
             BenchmarkMatrix.from_file(ROOT / f"configs/matrix/{name}.toml")
             for name in matrix_names
