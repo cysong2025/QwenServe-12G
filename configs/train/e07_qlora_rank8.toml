@@ -1,0 +1,33 @@
+[profile]
+name = "e07_qlora_rank8"
+description = "E07 primary rank-8 QLoRA training profile"
+
+[model]
+name = "Qwen/Qwen2.5-3B-Instruct"
+revision = "a1d308dfcc03e09da285d49d912439a655a571e8"
+
+[data]
+train_file = "datasets/e07_sft/train.jsonl"
+validation_file = "datasets/e07_sft/validation.jsonl"
+manifest = "datasets/e07_sft/dataset_manifest.json"
+
+[lora]
+rank = 8
+alpha = 16
+dropout = 0.05
+target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+
+[training]
+max_seq_length = 1024
+micro_batch_size = 1
+gradient_accumulation_steps = 16
+epochs = 3.0
+max_steps = 0
+learning_rate = 0.0002
+warmup_ratio = 0.05
+max_train_samples = 0
+seed = 20260824
+gradient_checkpointing = true
+
+[output]
+adapter_dir = "artifacts/adapters/e07/rank8"

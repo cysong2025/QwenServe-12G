@@ -75,6 +75,22 @@ def build_serve_command(config: ServeConfig) -> list[str]:
         )
     if config.enable_per_request_metrics:
         command.append("--enable-per-request-metrics")
+    if config.enable_lora:
+        assert config.lora_name is not None
+        assert config.lora_path is not None
+        assert config.max_loras is not None
+        assert config.max_lora_rank is not None
+        command.extend(
+            [
+                "--enable-lora",
+                "--lora-modules",
+                f"{config.lora_name}={config.lora_path}",
+                "--max-loras",
+                str(config.max_loras),
+                "--max-lora-rank",
+                str(config.max_lora_rank),
+            ]
+        )
     return command
 
 

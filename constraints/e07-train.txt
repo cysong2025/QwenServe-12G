@@ -1,0 +1,5 @@
+# Add only the packages absent from the pinned vLLM environment. The exact
+# installed state is captured after installation and in each training manifest.
+accelerate==1.12.0
+bitsandbytes==0.49.1
+peft==0.18.1

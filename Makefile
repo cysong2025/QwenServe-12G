@@ -4,9 +4,11 @@ MODEL_PATH ?= $(HOME)/models/Qwen2.5-3B-Instruct
 E02_BUDGET ?= 8192
 E02_SERVE_CONFIG = configs/serve/e02_batch_tokens_$(E02_BUDGET).toml
 E02_MATRIX_CONFIG = configs/matrix/e02_batch_tokens_$(E02_BUDGET).toml
+E07_ADAPTER_PATH ?= artifacts/adapters/e07/rank8
 
 .PHONY: doctor collect-env repair-bench-deps download-model-modelscope render-baseline render-baseline-local serve-baseline serve-baseline-local render-prefix render-baseline-matrix bench-smoke bench-baseline bench-baseline-matrix summarize-pilot summarize render-e02 render-e02-local serve-e02 serve-e02-local render-e02-matrix bench-e02-pilot bench-e02-matrix summarize-e02 compare-e02 render-e04-off-local render-e04-on-local serve-e04-off-local serve-e04-on-local render-e04-off-matrix render-e04-on-matrix bench-e04-off-pilot bench-e04-on-pilot bench-e04-off-matrix bench-e04-on-matrix bench-e04-off-capacity bench-e04-on-capacity summarize-e04 compare-e04 diagnose-e04 run-e04-canary-off run-e04-canary-on compare-e04-canary render-e05-bf16-local render-e05-fp8-local serve-e05-bf16-local serve-e05-fp8-local render-e05-bf16-matrix render-e05-fp8-matrix bench-e05-bf16-pilot bench-e05-fp8-pilot bench-e05-bf16-matrix bench-e05-fp8-matrix run-e05-quality-bf16 run-e05-quality-fp8 summarize-e05 compare-e05 capacity-e05 compare-e05-quality summarize-e05-human-review finalize-e05 test
 .PHONY: render-e06-bt8192-off-local render-e06-bt2048-off-local render-e06-bt8192-on-local render-e06-bt2048-on-local serve-e06-bt8192-off-local serve-e06-bt2048-off-local serve-e06-bt8192-on-local serve-e06-bt2048-on-local render-e06-bt8192-off-matrix render-e06-bt2048-off-matrix render-e06-bt8192-on-matrix render-e06-bt2048-on-matrix bench-e06-bt8192-off-pilot bench-e06-bt2048-off-pilot bench-e06-bt8192-on-pilot bench-e06-bt2048-on-pilot bench-e06-bt8192-off-matrix bench-e06-bt2048-off-matrix bench-e06-bt8192-on-matrix bench-e06-bt2048-on-matrix run-e06-canary-bt8192-off run-e06-canary-bt2048-off run-e06-canary-bt8192-on run-e06-canary-bt2048-on summarize-e06 compare-e06 compare-e06-canary audit-e01-e06
+.PHONY: install-e07-train-deps prepare-e07-data audit-e07-readiness render-e07-smoke train-e07-smoke train-e07-rank8 train-e07-rank16 inspect-e07-adapter render-e07-base-local render-e07-lora-local serve-e07-base-local serve-e07-lora-local render-e07-base-matrix render-e07-lora-matrix bench-e07-base-pilot bench-e07-lora-pilot bench-e07-base-matrix bench-e07-lora-matrix run-e07-quality-base run-e07-quality-lora summarize-e07 compare-e07 compare-e07-quality summarize-e07-human-review finalize-e07
 
 doctor:
 	$(QSL) doctor
@@ -292,6 +294,86 @@ compare-e06-canary:
 
 audit-e01-e06:
 	$(QSL) audit-e01-e06
+
+install-e07-train-deps:
+	bash scripts/bootstrap_e07_training.sh
+
+prepare-e07-data:
+	$(QSL) prepare-e07-data
+
+audit-e07-readiness:
+	$(QSL) audit-e07-readiness
+
+render-e07-smoke:
+	$(QSL) render-e07-train configs/train/e07_qlora_smoke_rank8.toml --model-path "$(MODEL_PATH)"
+
+train-e07-smoke:
+	$(QSL) train-e07 configs/train/e07_qlora_smoke_rank8.toml --model-path "$(MODEL_PATH)"
+
+train-e07-rank8:
+	$(QSL) train-e07 configs/train/e07_qlora_rank8.toml --model-path "$(MODEL_PATH)"
+
+train-e07-rank16:
+	$(QSL) train-e07 configs/train/e07_qlora_rank16.toml --model-path "$(MODEL_PATH)"
+
+inspect-e07-adapter:
+	$(QSL) inspect-e07-adapter --adapter-dir "$(E07_ADAPTER_PATH)" --expected-rank 8
+
+render-e07-base-local:
+	$(QSL) render-serve configs/serve/e07_base.toml --model-path "$(MODEL_PATH)"
+
+render-e07-lora-local:
+	$(QSL) render-serve configs/serve/e07_lora.toml --model-path "$(MODEL_PATH)"
+
+serve-e07-base-local:
+	$(QSL) run-serve configs/serve/e07_base.toml --model-path "$(MODEL_PATH)"
+
+serve-e07-lora-local:
+	$(QSL) run-serve configs/serve/e07_lora.toml --model-path "$(MODEL_PATH)" --adapter-path "$(E07_ADAPTER_PATH)"
+
+render-e07-base-matrix:
+	$(QSL) render-matrix configs/matrix/e07_base.toml --tokenizer-path "$(MODEL_PATH)"
+
+render-e07-lora-matrix:
+	$(QSL) render-matrix configs/matrix/e07_lora.toml --tokenizer-path "$(MODEL_PATH)"
+
+bench-e07-base-pilot:
+	$(QSL) run-matrix configs/matrix/e07_base.toml --only e07_base_medium_c4 --tokenizer-path "$(MODEL_PATH)" --skip-completed
+
+bench-e07-lora-pilot:
+	$(QSL) run-matrix configs/matrix/e07_lora.toml --only e07_lora_medium_c4 --tokenizer-path "$(MODEL_PATH)" --skip-completed
+
+bench-e07-base-matrix:
+	$(QSL) run-matrix configs/matrix/e07_base.toml --tokenizer-path "$(MODEL_PATH)" --skip-completed
+
+bench-e07-lora-matrix:
+	$(QSL) run-matrix configs/matrix/e07_lora.toml --tokenizer-path "$(MODEL_PATH)" --skip-completed
+
+run-e07-quality-base:
+	$(QSL) run-e07-quality --state base
+
+run-e07-quality-lora:
+	$(QSL) run-e07-quality --state lora
+
+summarize-e07:
+	$(QSL) summarize --manifest-dir artifacts/env --output-dir reports/e07_lora --profile-prefix e07_
+
+compare-e07:
+	$(QSL) compare-e07
+
+compare-e07-quality:
+	$(QSL) compare-e07-quality
+
+summarize-e07-human-review:
+	$(QSL) summarize-e07-human-review
+
+finalize-e07:
+	$(QSL) inspect-e07-adapter --adapter-dir artifacts/adapters/e07/rank8 --expected-rank 8
+	$(QSL) summarize --manifest-dir artifacts/env --output-dir reports/e07_lora --profile-prefix e07_
+	$(QSL) compare-e07
+	$(QSL) compare-e07-quality
+	$(QSL) summarize-e07-human-review
+	$(QSL) finalize-e07
 
 test:
 	PYTHONPATH=src $(PYTHON) -m unittest discover -s tests -v

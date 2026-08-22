@@ -33,8 +33,17 @@ E03 的长度 x 并发问题由 E01 的完整 3x4 矩阵覆盖，不重复计数
 E04 保留随机-token严格输出门槛的限制，E05 保留 FP8 质量回归失败，
 这些负面结果均没有被重新定义为成功优化。
 
-E07 QLoRA/LoRA serving 和 E08 token-aware 准入控制属于后续里程碑，
-不在本次 E01-E06 完成范围内。
+**E07 QLoRA/LoRA serving 的协议、数据、训练脚本、Adapter 校验、固定质量
+评测和 36-run 在线成本矩阵已经准备完成，状态为 `READY_FOR_GPU`。** GPU
+训练和推理结果尚未执行，当前不能宣称 E07 质量收益或在线开销结论。E08
+token-aware 准入控制仍属于后续里程碑。
+
+E07 的无 GPU 准备检查：
+
+```bash
+make prepare-e07-data
+make audit-e07-readiness
+```
 
 ## 核心结果
 
@@ -63,6 +72,7 @@ docs/                 项目章程、可行性与实验协议
 configs/serve/        vLLM 服务对照配置
 configs/bench/        benchmark 工作负载配置
 configs/matrix/       可展开的正式实验矩阵
+configs/train/        QLoRA smoke、主实验与 rank 消融配置
 src/qwen_serve_lab/   配置校验、命令生成与环境采集
 scripts/              WSL2 初始化入口
 artifacts/            环境快照和原始实验结果，不提交大文件
@@ -170,6 +180,13 @@ E05 的 BF16/FP8 分时启动、长上下文配对矩阵、KV token capacity、�
 E06 的四 cell 分时执行、组合收益门槛、因子交互和固定 canary 步骤见
 [E06 组合优化实验手册](docs/M3_E06_COMBINED_RUNBOOK.md)。
 完整结果和部署决策见 [E06 实验结果](docs/E06_RESULTS.md)。
+
+E07 的研究问题、冻结质量/成本门槛见
+[E07 实验协议](docs/E07_PROTOCOL.md)，训练数据来源和局限见
+[E07 数据卡](docs/E07_DATA_CARD.md)，WSL2 手工执行命令见
+[E07 QLoRA 与 LoRA Serving 运行手册](docs/M3_E07_QLORA_LORA_RUNBOOK.md)。
+[E07 结果模板](docs/E07_RESULTS_TEMPLATE.md) 只定义待填报告结构，不代表 GPU
+实验已经完成。
 
 详细边界和验收标准见 [项目章程](docs/PROJECT_CHARTER.md)、[可行性分析](docs/FEASIBILITY.md) 与 [实验协议](docs/EXPERIMENT_PROTOCOL.md)。
 

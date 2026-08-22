@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "description": "Synthetic, grouped AI infrastructure incidents for E07 QLoRA training. The frozen E05 quality set is test-only and is not copied here.",
+  "render_prefixes": [
+    "Production alert: ",
+    "On-call handoff: ",
+    "A controlled reproduction shows: ",
+    "The incident timeline records: ",
+    "Operator report: "
+  ],
+  "categories": [
+    {
+      "root_cause": "cuda_oom",
+      "actions": ["reduce_batch_size", "enable_gradient_checkpointing"],
+      "train": [
+        "A single-GPU adapter job loads successfully but fails in backward after the micro batch is raised from one to six; the allocator reports CUDA out of memory.",
+        "The first optimizer step cannot reserve another activation tensor on the GPU, while the model snapshot and local disk remain healthy.",
+        "Increasing sequence length makes a QLoRA run fail during gradient computation with only a few MiB free on the device.",
+        "Fine-tuning completes with checkpointing enabled but exhausts device memory when checkpointing is disabled under the same data and driver.",
+        "A training worker reaches the GPU allocation limit during backward; no inference process or unrelated CUDA application is running."
+      ],
+      "validation": [
+        "The adapter trainer initializes, then the CUDA allocator fails only after per-device batch size is increased; reducing it previously completed.",
+        "Backward on a long training example requests more device memory than remains, although package import and model loading both succeeded."
+      ]
+    },
+    {
+      "root_cause": "kv_cache_exhaustion",
+      "actions": ["reduce_concurrency", "reduce_context_length"],
+      "train": [
+        "The online engine has no free KV blocks when eight long prompts decode together, but short low-concurrency requests still complete.",
+        "Serving starts normally and then preempts 8K sequences repeatedly because every paged-attention cache block is occupied.",
+        "Four long requests fit, while admitting twelve with the same model stalls allocation despite stable model-weight memory.",
+        "Context growth from 2K to 8K consumes the remaining GPU KV capacity and new requests wait for blocks rather than failing model load.",
+        "The scheduler reports zero available KV cache blocks at peak concurrency; lowering active sequence count restores service."
+      ],
+      "validation": [
+        "Near-maximum prompts fill the token cache and trigger recomputation, while the CUDA allocator does not report a weight-loading OOM.",
+        "The model remains resident, but long-context traffic cannot admit another sequence because its KV block pool is exhausted."
+      ]
+    },
+    {
+      "root_cause": "driver_cuda_mismatch",
+      "actions": ["align_driver_and_cuda", "install_compatible_torch_build"],
+      "train": [
+        "The host sees the NVIDIA device, but the installed PyTorch CUDA runtime requires a newer driver and CUDA initialization fails.",
+        "A custom CUDA operator was built for another CUDA major version and cannot resolve symbols against the active torch wheel.",
+        "nvidia-smi works in WSL2 while torch reports that the host driver is incompatible with the bundled CUDA runtime.",
+        "After upgrading the CUDA-enabled torch build, kernel loading fails before any model file is opened because the driver branch is too old.",
+        "The extension loader reports an ABI mismatch between the active CUDA runtime and the version used to compile its shared object."
+      ],
+      "validation": [
+        "GPU discovery succeeds outside Python, yet torch cannot initialize because its wheel targets a CUDA release unsupported by the current driver.",
+        "A compiled attention kernel fails with undefined CUDA symbols immediately after torch was replaced with a wheel from another runtime family."
+      ]
+    },
+    {
+      "root_cause": "dependency_conflict",
+      "actions": ["pin_compatible_dependencies", "recreate_virtual_environment"],
+      "train": [
+        "The benchmark CLI imports an old datasets package that calls an API removed by the newly upgraded PyArrow package.",
+        "Installing an unrelated tool changed pydantic and transformers to releases outside the serving stack's supported ranges.",
+        "The environment resolver reports incompatible tokenizers requirements and vLLM now fails during Python import before touching CUDA.",
+        "Packages from two experiments share one virtual environment and require mutually exclusive versions of a common dependency.",
+        "A partial pip upgrade leaves benchmark extras and the core inference package on inconsistent releases, producing an import AttributeError."
+      ],
+      "validation": [
+        "The application starts in a clean lockfile environment but crashes in the current environment after transitive libraries were upgraded independently.",
+        "Importing the serving CLI fails because installed library versions violate its declared dependency constraints; hardware checks have not started."
+      ]
+    },
+    {
+      "root_cause": "model_artifact_unavailable",
+      "actions": ["use_local_model_snapshot", "configure_network_or_mirror"],
+      "train": [
+        "The node cannot reach the model registry over HTTPS and has no cached configuration or weight files for the pinned revision.",
+        "Every repository metadata request is reset by the network, while a verified model snapshot can be transferred from another machine.",
+        "An offline inference host starts with an empty model cache and fails before config.json can be resolved from the remote repository.",
+        "Corporate egress blocks the model hub although package mirrors and local applications remain reachable; the required weights are absent.",
+        "The serving process retries remote HEAD requests and reports network unreachable because no local snapshot exists for the requested revision."
+      ],
+      "validation": [
+        "Model startup times out downloading tokenizer and weight artifacts, but a domestic mirror is reachable and the intended commit is known.",
+        "The service configuration is valid, yet the air-gapped node lacks all model artifacts and cannot contact the upstream registry."
+      ]
+    },
+    {
+      "root_cause": "tokenizer_mismatch",
+      "actions": ["use_matching_tokenizer", "pin_model_revision"],
+      "train": [
+        "The load generator uses tokenizer files from another Qwen variant, so measured token IDs and server usage disagree for identical text.",
+        "Only tokenizer assets were upgraded in the local snapshot and special chat markers are now encoded differently from the model revision.",
+        "Client-side prompt lengths no longer align with server accounting because the benchmark silently fetched a newer tokenizer commit.",
+        "Requests fail an alignment check after the client points to a tokenizer from a different model family than the running service.",
+        "The server is fully offline, but the client cache contains tokenizer.json from another revision and produces different encodings."
+      ],
+      "validation": [
+        "Chat template tokens are treated as ordinary text because tokenizer configuration and model weights came from different revisions.",
+        "The same prompt maps to different token sequences on client and server after only one side updated its tokenizer snapshot."
+      ]
+    },
+    {
+      "root_cause": "disk_exhaustion",
+      "actions": ["free_disk_space", "move_model_cache"],
+      "train": [
+        "A model download stops with no space left on device after the filesystem containing the cache reaches one hundred percent usage.",
+        "Checkpoint saving fails because the WSL virtual disk has only a few megabytes available, while GPU memory remains below its limit.",
+        "Temporary weight shards fill the home partition and the snapshot cannot atomically rename its final file into the cache.",
+        "Training writes checkpoints successfully to a larger mount but fails when output_dir is moved back to the nearly full root filesystem.",
+        "The cache directory cannot create another safetensors shard due to exhausted disk blocks; network and CUDA are healthy."
+      ],
+      "validation": [
+        "Adapter serialization raises an operating-system no-space error and df reports the output volume at full capacity.",
+        "The download has enough network bandwidth but cannot write the final artifact because the configured model-cache partition is full."
+      ]
+    },
+    {
+      "root_cause": "request_overload",
+      "actions": ["add_admission_control", "cap_request_concurrency"],
+      "train": [
+        "A burst admits far more simultaneous requests than the service capacity and queue delay rises sharply although each request is valid.",
+        "Latency SLO failures appear only when arrival rate exceeds sustainable throughput; limiting in-flight work restores stable tails.",
+        "The endpoint remains alive but an unbounded client burst creates a growing queue and most requests miss TTFT targets.",
+        "Traffic at concurrency four is healthy while concurrency sixty-four overwhelms scheduling and causes timeouts without a model error.",
+        "Raw request rate exceeds completion rate for several minutes, so backlog and tail latency continue increasing until clients stop."
+      ],
+      "validation": [
+        "The service recovers immediately when new requests are throttled; GPU kernels, artifacts, and dependency versions are otherwise healthy.",
+        "A sudden fan-out sends hundreds of valid prompts to one replica and saturates its queue despite adequate capacity under normal load."
+      ]
+    },
+    {
+      "root_cause": "model_path_invalid",
+      "actions": ["correct_model_path", "verify_snapshot_files"],
+      "train": [
+        "The configured local model directory is misspelled and does not contain config.json at the resolved path.",
+        "Serving points to a parent cache directory rather than the concrete snapshot folder that holds tokenizer and weight files.",
+        "The supplied model path exists but references an incomplete transfer with no safetensors shards or manifest.",
+        "A relative path resolves from the wrong working directory, so vLLM interprets it as a nonexistent local model location.",
+        "Startup rejects the snapshot folder because required tokenizer files were omitted during manual copying."
+      ],
+      "validation": [
+        "The command names a directory that was renamed yesterday and validation cannot find any model configuration beneath it.",
+        "A local-only launch fails because the selected snapshot path contains metadata but none of the expected weight shard files."
+      ]
+    },
+    {
+      "root_cause": "unsupported_precision",
+      "actions": ["use_supported_dtype", "verify_gpu_capability"],
+      "train": [
+        "The engine selects a precision kernel that is not implemented for the detected GPU compute capability and aborts during initialization.",
+        "A quantized dtype requested in the server profile is unsupported by the installed kernels for this graphics architecture.",
+        "Model loading reaches kernel selection, then rejects the configured low-precision format despite valid weights and sufficient memory.",
+        "The operator reports that the requested floating-point mode requires hardware features absent from the current accelerator.",
+        "Switching back to a supported BF16 profile starts correctly, while the experimental precision profile fails capability checks."
+      ],
+      "validation": [
+        "The runtime cannot dispatch the requested quantization kernel on this compute architecture and recommends a supported dtype.",
+        "An attention backend rejects the configured precision before serving begins because its device capability check does not pass."
+      ]
+    }
+  ]
+}

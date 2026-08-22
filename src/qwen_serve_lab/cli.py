@@ -34,6 +34,19 @@ from qwen_serve_lab.e05_quality import (
 )
 from qwen_serve_lab.e06 import write_e06_comparison
 from qwen_serve_lab.e06_canary import compare_e06_canary, run_e06_canary
+from qwen_serve_lab.e07 import write_e07_comparison, write_e07_final_report
+from qwen_serve_lab.e07_data import prepare_e07_dataset
+from qwen_serve_lab.e07_quality import (
+    compare_e07_quality,
+    run_e07_quality,
+    summarize_e07_human_review,
+)
+from qwen_serve_lab.e07_readiness import write_e07_readiness_report
+from qwen_serve_lab.e07_training import (
+    E07TrainingConfig,
+    run_e07_training,
+    write_e07_adapter_report,
+)
 from qwen_serve_lab.final_audit import write_e01_e06_audit
 from qwen_serve_lab.config import (
     BenchmarkConfig,
@@ -79,12 +92,14 @@ def _parser() -> argparse.ArgumentParser:
     serve = subparsers.add_parser("render-serve", help="Render a validated vLLM command")
     serve.add_argument("config", type=Path)
     serve.add_argument("--model-path", type=Path)
+    serve.add_argument("--adapter-path", type=Path)
 
     run_serve = subparsers.add_parser(
         "run-serve", help="Run vLLM while capturing logs and a server manifest"
     )
     run_serve.add_argument("config", type=Path)
     run_serve.add_argument("--model-path", type=Path)
+    run_serve.add_argument("--adapter-path", type=Path)
 
     benchmark = subparsers.add_parser(
         "render-bench", help="Render one validated vLLM benchmark command"
@@ -322,6 +337,109 @@ def _parser() -> argparse.ArgumentParser:
     audit_e01_e06_parser.add_argument(
         "--output-dir", type=Path, default=Path("reports/e01_e06")
     )
+    prepare_e07 = subparsers.add_parser(
+        "prepare-e07-data", help="Build and audit grouped E07 SFT splits"
+    )
+    prepare_e07.add_argument(
+        "--source",
+        type=Path,
+        default=Path("datasets/e07_ai_infra_sft_source.json"),
+    )
+    prepare_e07.add_argument(
+        "--test",
+        type=Path,
+        default=Path("datasets/e05_ai_infra_quality.json"),
+    )
+    prepare_e07.add_argument(
+        "--output-dir", type=Path, default=Path("datasets/e07_sft")
+    )
+    render_e07_train = subparsers.add_parser(
+        "render-e07-train", help="Validate and render one E07 training invocation"
+    )
+    render_e07_train.add_argument("config", type=Path)
+    render_e07_train.add_argument("--model-path", type=Path, required=True)
+    train_e07 = subparsers.add_parser(
+        "train-e07", help="Run one controlled E07 QLoRA training profile"
+    )
+    train_e07.add_argument("config", type=Path)
+    train_e07.add_argument("--model-path", type=Path, required=True)
+    inspect_e07 = subparsers.add_parser(
+        "inspect-e07-adapter", help="Validate an E07 Adapter and write its report"
+    )
+    inspect_e07.add_argument(
+        "--adapter-dir", type=Path, default=Path("artifacts/adapters/e07/rank8")
+    )
+    inspect_e07.add_argument("--expected-rank", type=int, default=8)
+    inspect_e07.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e07_lora")
+    )
+    run_e07_quality_parser = subparsers.add_parser(
+        "run-e07-quality", help="Run the fixed E07 Base/LoRA quality set"
+    )
+    run_e07_quality_parser.add_argument(
+        "--state", choices=("base", "lora"), required=True
+    )
+    run_e07_quality_parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=Path("datasets/e05_ai_infra_quality.json"),
+    )
+    run_e07_quality_parser.add_argument(
+        "--result-root",
+        type=Path,
+        default=Path("artifacts/results/e07_quality"),
+    )
+    compare_e07_quality_parser = subparsers.add_parser(
+        "compare-e07-quality", help="Compare E07 Base and LoRA quality"
+    )
+    compare_e07_quality_parser.add_argument(
+        "--result-root",
+        type=Path,
+        default=Path("artifacts/results/e07_quality"),
+    )
+    compare_e07_quality_parser.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e07_lora")
+    )
+    human_e07 = subparsers.add_parser(
+        "summarize-e07-human-review", help="Unblind and summarize E07 human review"
+    )
+    human_e07.add_argument(
+        "--review-csv",
+        type=Path,
+        default=Path("reports/e07_lora/human_review.csv"),
+    )
+    human_e07.add_argument(
+        "--review-key",
+        type=Path,
+        default=Path("reports/e07_lora/human_review_key.json"),
+    )
+    human_e07.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e07_lora")
+    )
+    compare_e07_parser = subparsers.add_parser(
+        "compare-e07", help="Compare paired E07 Base/LoRA performance runs"
+    )
+    compare_e07_parser.add_argument(
+        "--runs-csv",
+        type=Path,
+        default=Path("reports/e07_lora/runs.csv"),
+    )
+    compare_e07_parser.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e07_lora")
+    )
+    finalize_e07_parser = subparsers.add_parser(
+        "finalize-e07", help="Apply all E07 Adapter, quality, and cost gates"
+    )
+    finalize_e07_parser.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e07_lora")
+    )
+    readiness_e07_parser = subparsers.add_parser(
+        "audit-e07-readiness", help="Audit E07 code and protocol without a GPU"
+    )
+    readiness_e07_parser.add_argument("--root", type=Path, default=Path("."))
+    readiness_e07_parser.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e07_lora")
+    )
     return parser
 
 
@@ -352,10 +470,19 @@ def _effective_serve_config(config: ServeConfig) -> dict[str, object]:
     return payload
 
 
-def _load_serve_config(config_path: Path, model_path: Path | None) -> ServeConfig:
+def _load_serve_config(
+    config_path: Path,
+    model_path: Path | None,
+    adapter_path: Path | None = None,
+    validate_adapter: bool = False,
+) -> ServeConfig:
     config = ServeConfig.from_file(config_path)
     if model_path is not None:
         config = config.with_local_model(model_path)
+    if adapter_path is not None:
+        config = config.with_lora_adapter(adapter_path)
+    elif validate_adapter and config.enable_lora:
+        config = config.with_lora_adapter()
     return config
 
 
@@ -367,6 +494,10 @@ def _write_active_server(config: ServeConfig, pid: int) -> dict[str, object]:
         "server_config_sha256": config.source_sha256,
         "pid": pid,
         "started_at": datetime.now(timezone.utc).isoformat(),
+        "lora_name": config.lora_name,
+        "lora_path": str(config.lora_path) if config.lora_path else None,
+        "lora_manifest_sha256": config.lora_manifest_sha256,
+        "lora_weights_sha256": config.lora_weights_sha256,
     }
     write_json(marker, ACTIVE_SERVER_PATH)
     return marker
@@ -415,8 +546,17 @@ def _verify_active_server(config: BenchmarkConfig) -> dict[str, object]:
     return marker
 
 
-def _run_server(config_path: Path, model_path: Path | None = None) -> int:
-    config = _load_serve_config(config_path, model_path)
+def _run_server(
+    config_path: Path,
+    model_path: Path | None = None,
+    adapter_path: Path | None = None,
+) -> int:
+    config = _load_serve_config(
+        config_path,
+        model_path,
+        adapter_path,
+        validate_adapter=True,
+    )
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     command = build_serve_command(config)
     environment_overrides = build_serve_environment(config)
@@ -815,7 +955,9 @@ def main(argv: list[str] | None = None) -> int:
             print(output)
             return 0
         if args.command == "render-serve":
-            config = _load_serve_config(args.config, args.model_path)
+            config = _load_serve_config(
+                args.config, args.model_path, args.adapter_path
+            )
             print(
                 render_shell_command(
                     build_serve_command(config), build_serve_environment(config)
@@ -823,7 +965,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 0
         if args.command == "run-serve":
-            return _run_server(args.config, args.model_path)
+            return _run_server(args.config, args.model_path, args.adapter_path)
         if args.command == "render-bench":
             config = _load_benchmark_config(args.config, args.tokenizer_path)
             print(
@@ -981,6 +1123,77 @@ def main(argv: list[str] | None = None) -> int:
             json_path, markdown_path, passed = write_e01_e06_audit(
                 repo_root=args.root,
                 output_dir=args.output_dir,
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0 if passed else 2
+        if args.command == "prepare-e07-data":
+            paths = prepare_e07_dataset(args.source, args.test, args.output_dir)
+            for path in paths:
+                print(path)
+            return 0
+        if args.command == "render-e07-train":
+            config = E07TrainingConfig.from_file(args.config)
+            command = [
+                sys.executable,
+                "-m",
+                "qwen_serve_lab.cli",
+                "train-e07",
+                str(args.config),
+                "--model-path",
+                str(args.model_path),
+            ]
+            print(f"# profile={config.profile_name} rank={config.rank}")
+            print(render_shell_command(command, {"PYTHONPATH": "src"}))
+            return 0
+        if args.command == "train-e07":
+            manifest_path = run_e07_training(args.config, args.model_path)
+            print(manifest_path)
+            return 0
+        if args.command == "inspect-e07-adapter":
+            json_path, markdown_path, passed = write_e07_adapter_report(
+                args.adapter_dir, args.output_dir, args.expected_rank
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0 if passed else 2
+        if args.command == "run-e07-quality":
+            output_path, valid = run_e07_quality(
+                args.state, args.dataset, args.result_root
+            )
+            print(output_path)
+            return 0 if valid else 2
+        if args.command == "compare-e07-quality":
+            json_path, markdown_path, passed = compare_e07_quality(
+                args.result_root, args.output_dir
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0 if passed else 2
+        if args.command == "summarize-e07-human-review":
+            json_path, markdown_path, passed = summarize_e07_human_review(
+                args.review_csv, args.review_key, args.output_dir
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0 if passed else 2
+        if args.command == "compare-e07":
+            csv_path, markdown_path, passed = write_e07_comparison(
+                args.runs_csv, args.output_dir
+            )
+            print(csv_path)
+            print(markdown_path)
+            return 0 if passed else 2
+        if args.command == "finalize-e07":
+            json_path, markdown_path, passed = write_e07_final_report(
+                args.output_dir
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0 if passed else 2
+        if args.command == "audit-e07-readiness":
+            json_path, markdown_path, passed = write_e07_readiness_report(
+                args.root, args.output_dir
             )
             print(json_path)
             print(markdown_path)

@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "kind": "e07_readiness_report",
+  "created_at": "2026-08-22T12:29:45.844413+00:00",
+  "status": "READY_FOR_GPU",
+  "gpu_execution": "DEFERRED",
+  "planned_formal_benchmark_runs": 36,
+  "checks": [
+    {
+      "name": "dataset",
+      "passed": true,
+      "detail": "250 train and 100 validation rows; frozen 50-case set remains test-only"
+    },
+    {
+      "name": "smoke-profile",
+      "passed": true,
+      "detail": "100-example rank-8 smoke with bounded steps"
+    },
+    {
+      "name": "rank-ablation",
+      "passed": true,
+      "detail": "rank 8/16 profiles differ only in rank, alpha, description, and output"
+    },
+    {
+      "name": "server-control",
+      "passed": true,
+      "detail": "Base and LoRA serving controls match outside the treatment fields"
+    },
+    {
+      "name": "lora-command",
+      "passed": true,
+      "detail": "vLLM command explicitly names the rank-8 Adapter"
+    },
+    {
+      "name": "performance-matrix",
+      "passed": true,
+      "detail": "six paired cells per state and 36 total planned repetitions"
+    },
+    {
+      "name": "quality-protocol",
+      "passed": true,
+      "detail": "fixed 50-case automated and blinded-human comparison is wired"
+    },
+    {
+      "name": "training-dependencies",
+      "passed": true,
+      "detail": "QLoRA-only packages are pinned without replacing torch/transformers"
+    },
+    {
+      "name": "runbook",
+      "passed": true,
+      "detail": "operator runbook and data card are present"
+    }
+  ]
+}

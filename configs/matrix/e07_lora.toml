@@ -1,0 +1,42 @@
+[profile]
+name = "e07_lora_matrix"
+server_profile = "e07_lora"
+server_config = "../serve/e07_lora.toml"
+
+[matrix]
+profile_prefix = "e07_lora"
+concurrencies = [1, 4, 8]
+result_root = "artifacts/results/e07_lora/lora"
+
+[[workloads]]
+name = "short"
+input_len = 128
+output_len = 128
+seed_offset = 0
+
+[[workloads]]
+name = "medium"
+input_len = 512
+output_len = 256
+seed_offset = 10000
+
+[benchmark]
+model = "Qwen/Qwen2.5-3B-Instruct"
+served_model_name = "ai-infra-triage-r8"
+base_url = "http://127.0.0.1:8000"
+endpoint = "/v1/completions"
+dataset_name = "random"
+num_prompts = 100
+request_rate = "inf"
+burstiness = 1.0
+num_warmups = 10
+metric_percentiles = [50, 95, 99]
+goodput_ttft_ms = 1000
+goodput_tpot_ms = 50
+seed = 20260824
+repetition_seed_stride = 100
+temperature = 0.0
+ignore_eos = true
+repetitions = 3
+cooldown_seconds = 30
+ready_check_timeout_seconds = 60

@@ -107,6 +107,13 @@ class ServeConfig:
     enable_chunked_prefill: bool | None = None
     seed: int | None = None
     calculate_kv_scales: bool = False
+    enable_lora: bool = False
+    lora_name: str | None = None
+    lora_path: Path | None = None
+    max_loras: int | None = None
+    max_lora_rank: int | None = None
+    lora_manifest_sha256: str | None = None
+    lora_weights_sha256: str | None = None
     local_model_path: Path | None = None
     local_model_manifest_sha256: str | None = None
 
@@ -135,6 +142,34 @@ class ServeConfig:
         calculate_kv_scales = _optional_bool(server, "calculate_kv_scales")
         if calculate_kv_scales is None:
             calculate_kv_scales = False
+        enable_lora = _optional_bool(server, "enable_lora")
+        if enable_lora is None:
+            enable_lora = False
+        lora_name = server.get("lora_name")
+        lora_path_raw = server.get("lora_path")
+        max_loras = _optional_positive_int(server, "max_loras")
+        max_lora_rank = _optional_positive_int(server, "max_lora_rank")
+        if enable_lora:
+            if not isinstance(lora_name, str) or not lora_name.strip():
+                raise ConfigError("enable_lora=true requires a non-empty lora_name")
+            if not isinstance(lora_path_raw, str) or not lora_path_raw.strip():
+                raise ConfigError("enable_lora=true requires a non-empty lora_path")
+            if max_loras is None or max_lora_rank is None:
+                raise ConfigError(
+                    "enable_lora=true requires max_loras and max_lora_rank"
+                )
+            lora_name = lora_name.strip()
+            lora_path = Path(lora_path_raw).expanduser()
+        else:
+            if any(
+                value is not None
+                for value in (lora_name, lora_path_raw, max_loras, max_lora_rank)
+            ):
+                raise ConfigError(
+                    "LoRA fields require enable_lora=true"
+                )
+            lora_name = None
+            lora_path = None
         kv_cache_dtype = _required(server, "kv_cache_dtype", str)
         attention_backend = server.get("attention_backend")
         if attention_backend is not None:
@@ -196,6 +231,11 @@ class ServeConfig:
             enable_chunked_prefill=enable_chunked_prefill,
             seed=seed,
             calculate_kv_scales=calculate_kv_scales,
+            enable_lora=enable_lora,
+            lora_name=lora_name,
+            lora_path=lora_path,
+            max_loras=max_loras,
+            max_lora_rank=max_lora_rank,
         )
 
     def with_local_model(self, path: str | Path) -> "ServeConfig":
@@ -221,6 +261,59 @@ class ServeConfig:
             self,
             local_model_path=model_path,
             local_model_manifest_sha256=_sha256(manifest_path),
+        )
+
+    def with_lora_adapter(self, path: str | Path | None = None) -> "ServeConfig":
+        if not self.enable_lora or self.lora_name is None:
+            raise ConfigError("Cannot attach an adapter to a non-LoRA server profile")
+        adapter_path = Path(path or self.lora_path or "").expanduser().resolve()
+        if not adapter_path.is_dir():
+            raise ConfigError(f"LoRA adapter directory does not exist: {adapter_path}")
+        required_files = (
+            "adapter_config.json",
+            "adapter_model.safetensors",
+            "training_manifest.json",
+        )
+        missing = [
+            name for name in required_files if not (adapter_path / name).is_file()
+        ]
+        if missing:
+            raise ConfigError(
+                "LoRA adapter directory is incomplete; missing: "
+                + ", ".join(missing)
+            )
+        try:
+            adapter_config = json.loads(
+                (adapter_path / "adapter_config.json").read_text(encoding="utf-8")
+            )
+            training_manifest = json.loads(
+                (adapter_path / "training_manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ConfigError(f"Cannot read LoRA adapter metadata: {exc}") from exc
+        rank = adapter_config.get("r") if isinstance(adapter_config, dict) else None
+        if rank != self.max_lora_rank:
+            raise ConfigError(
+                f"LoRA adapter rank {rank} does not match max_lora_rank "
+                f"{self.max_lora_rank}"
+            )
+        weights_sha256 = _sha256(adapter_path / "adapter_model.safetensors")
+        if (
+            not isinstance(training_manifest, dict)
+            or training_manifest.get("kind") != "e07_training_manifest"
+            or training_manifest.get("status") != "COMPLETE"
+            or training_manifest.get("adapter_weights_sha256") != weights_sha256
+        ):
+            raise ConfigError(
+                "LoRA training manifest does not authenticate the Adapter weights"
+            )
+        return replace(
+            self,
+            lora_path=adapter_path,
+            lora_manifest_sha256=_sha256(adapter_path / "training_manifest.json"),
+            lora_weights_sha256=weights_sha256,
         )
 
     @property

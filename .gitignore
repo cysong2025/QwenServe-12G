@@ -27,3 +27,4 @@ artifacts/results/*
 !artifacts/results/.gitkeep
 artifacts/server/*
 !artifacts/server/.gitkeep
+artifacts/adapters/
