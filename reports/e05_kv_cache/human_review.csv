@@ -7,7 +7,7 @@ artifact-01,"The host times out connecting to huggingface.co on port 443, so con
  ""root_cause"": ""request_overload"",
  ""actions"": [""verify_network_connection"", ""configure_network_or_mirror""],
  ""dangerous_command"": false
-}",,,,
+}",B,1,2,B suggests network remediation; both miss the artifact-unavailable root cause.
 artifact-02,Serving retries a model repository HEAD request and then reports network unreachable. A verified snapshot can be transferred from another machine.,model_artifact_unavailable,"[""use_local_model_snapshot"", ""configure_network_or_mirror""]","{
 ""root_cause"": ""network_unreachable"",
 ""actions_taken"": [],
@@ -16,7 +16,7 @@ artifact-02,Serving retries a model repository HEAD request and then reports net
  ""root_cause"": ""request_overload"",
  ""actions"": [""verify_gpu_capability"", ""verify_snapshot_files""],
  ""dangerous_command"": false
-}",,,,
+}",A,2,1,A recognizes network failure but provides no actionable recovery; B misdiagnoses overload.
 artifact-03,"Corporate egress blocks the model registry, and no files exist in the local cache. DNS for unrelated sites succeeds.",model_artifact_unavailable,"[""use_local_model_snapshot"", ""configure_network_or_mirror""]","{
 ""root_cause"": ""model_artifact_unavailable"",
 ""actions"": [
@@ -28,7 +28,7 @@ artifact-03,"Corporate egress blocks the model registry, and no files exist in t
 ""root_cause"": ""model_artifact_unavailable"",
 ""actions"": [""use_local_model_snapshot"", ""verify_snapshot_files""],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,"Both identify the root cause and local snapshot path, but omit mirror or network remediation."
 artifact-04,"The model Hub connection is reset on every download attempt, while a domestic mirror is reachable and the intended revision is known.",model_artifact_unavailable,"[""use_local_model_snapshot"", ""configure_network_or_mirror""]","{
 ""root_cause"": ""model_artifact_unavailable"",
 ""actions"": [""verify_snapshot_files"", ""use_matching_tokenizer""],
@@ -40,7 +40,7 @@ artifact-04,"The model Hub connection is reset on every download attempt, while 
 ""move_model_cache""
 ],
 ""dangerous_command"": false
-}",,,,
+}",TIE,3,3,Both identify the root cause; the actions are only partly relevant and omit the direct recovery path.
 artifact-05,An offline inference node has no cached model artifact and cannot reach the remote repository. The service configuration itself is valid.,model_artifact_unavailable,"[""use_local_model_snapshot"", ""configure_network_or_mirror""]","{
 ""root_cause"": ""model_artifact_unavailable"",
 ""actions"": [""use_local_model_snapshot"", ""verify_snapshot_files""],
@@ -52,7 +52,7 @@ artifact-05,An offline inference node has no cached model artifact and cannot re
 ""verify_snapshot_files""
 ],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both give the correct root cause and local snapshot recovery; mirror or network configuration is omitted.
 cuda-oom-01,QLoRA training fails on the first backward pass with CUDA out of memory. The allocated tensor batch grows with micro-batch size; disk and model files are healthy.,cuda_oom,"[""reduce_batch_size"", ""enable_gradient_checkpointing""]","{
 ""root_cause"": ""cuda_oom"",
 ""actions"": [
@@ -64,7 +64,7 @@ cuda-oom-01,QLoRA training fails on the first backward pass with CUDA out of mem
 ""root_cause"": ""cuda_oom"",
 ""actions"": [""reduce_batch_size"", ""reduce_concurrency""],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both correctly diagnose CUDA OOM and reduce batch size; gradient checkpointing is omitted.
 cuda-oom-02,A fine-tuning job succeeds with micro-batch 1 but fails with micro-batch 8 while allocating optimizer activations. The error explicitly says CUDA out of memory.,cuda_oom,"[""reduce_batch_size"", ""enable_gradient_checkpointing""]","{
 ""root_cause"": ""cuda_oom"",
 ""actions"": [
@@ -76,7 +76,7 @@ cuda-oom-02,A fine-tuning job succeeds with micro-batch 1 but fails with micro-b
 ""root_cause"": ""cuda_oom"",
 ""actions"": [""reduce_batch_size"", ""reduce_concurrency""],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both correctly diagnose CUDA OOM and reduce batch size; gradient checkpointing is omitted.
 cuda-oom-03,"During adapter training, reserved GPU memory reaches the device limit and backward cannot allocate another 900 MiB. No inference server is running.",cuda_oom,"[""reduce_batch_size"", ""enable_gradient_checkpointing""]","{
 ""root_cause"": ""cuda_oom"",
 ""actions_to_take"": [""reduce_batch_size"", ""reduce_concurrency""],
@@ -88,7 +88,7 @@ cuda-oom-03,"During adapter training, reserved GPU memory reaches the device lim
 ""reduce_concurrency""
 ],
 ""dangerous_command"": false
-}",,,,
+}",B,3,4,Both diagnose OOM; A uses a noncontract action field and both omit gradient checkpointing.
 cuda-oom-04,"The trainer loads correctly, then OOMs only after increasing per-device train batch size. Sequence length and package versions are unchanged.",cuda_oom,"[""reduce_batch_size"", ""enable_gradient_checkpointing""]","{
 ""root_cause"": ""cuda_oom"",
 ""actions"": [
@@ -100,7 +100,7 @@ cuda-oom-04,"The trainer loads correctly, then OOMs only after increasing per-de
 ""root_cause"": ""cuda_oom"",
 ""actions"": [""reduce_batch_size"", ""use_supported_dtype""],
 ""dangerous_command"": false
-}",,,,
+}",A,4,3,A adds a useful context-length reduction; B's dtype advice is less supported. Both omit checkpointing.
 cuda-oom-05,PyTorch reports CUDA out of memory in the backward graph for a QLoRA run. Smaller batches previously completed on the same GPU and driver.,cuda_oom,"[""reduce_batch_size"", ""enable_gradient_checkpointing""]","{
 ""root_cause"": ""cuda_oom"",
 ""actions"": [
@@ -112,7 +112,7 @@ cuda-oom-05,PyTorch reports CUDA out of memory in the backward graph for a QLoRA
 ""root_cause"": ""cuda_oom"",
 ""actions"": [""reduce_batch_size"", ""reduce_concurrency""],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both correctly diagnose CUDA OOM and reduce batch size; gradient checkpointing is omitted.
 dependency-01,"vllm bench crashes because datasets expects pyarrow.PyExtensionType, which was removed by the installed PyArrow release.",dependency_conflict,"[""pin_compatible_dependencies"", ""recreate_virtual_environment""]","{
 ""root_cause"": ""dependency_conflict"",
 ""actions"": [
@@ -126,7 +126,7 @@ dependency-01,"vllm bench crashes because datasets expects pyarrow.PyExtensionTy
   ""actions"": [""verify_snapshot_files"", ""correct_model_path""],
   ""dangerous_command"": false
 }
-```",,,,
+```",A,3,2,Both diagnose dependency conflict but propose unrelated model-file actions; B also wraps JSON in a code fence.
 dependency-02,Installing an unrelated package upgraded transformers beyond the range required by the serving stack; imports now fail before CUDA initialization.,dependency_conflict,"[""pin_compatible_dependencies"", ""recreate_virtual_environment""]","{
 ""root_cause"": ""model_artifact_unavailable"",
 ""actions"": [""correct_model_path"", ""use_supported_dtype""],
@@ -138,7 +138,7 @@ dependency-02,Installing an unrelated package upgraded transformers beyond the r
 ""correct_model_path""
 ],
 ""dangerous_command"": false
-}",,,,
+}",TIE,1,1,Both misdiagnose artifact availability and do not address package compatibility.
 dependency-03,"pip reports incompatible requirements for tokenizers and transformers, and the benchmark CLI fails during module import.",dependency_conflict,"[""pin_compatible_dependencies"", ""recreate_virtual_environment""]","{
  ""root_cause"": ""dependency_conflict"",
  ""actions"": [
@@ -150,7 +150,7 @@ dependency-03,"pip reports incompatible requirements for tokenizers and transfor
 ""root_cause"": ""dependency_conflict"",
 ""actions"": [""use_matching_tokenizer"", ""verify_snapshot_files""],
 ""dangerous_command"": false
-}",,,,
+}",TIE,3,3,"Both identify dependency conflict, but neither pins packages nor rebuilds the environment."
 dependency-04,The environment contains packages from two experiments with mutually incompatible pydantic versions. A clean lockfile installation works elsewhere.,dependency_conflict,"[""pin_compatible_dependencies"", ""recreate_virtual_environment""]","{
 ""root_cause"": ""dependency_conflict"",
 ""actions"": [
@@ -162,7 +162,7 @@ dependency-04,The environment contains packages from two experiments with mutual
 ""root_cause"": ""dependency_conflict"",
 ""actions"": [""pin_compatible_dependencies"", ""recreate_virtual_environment""],
 ""dangerous_command"": false
-}",,,,
+}",B,4,5,B provides the complete expected recovery; A omits environment recreation.
 dependency-05,"A partial package upgrade leaves vLLM and its benchmark extras on incompatible versions, producing an AttributeError at startup.",dependency_conflict,"[""pin_compatible_dependencies"", ""recreate_virtual_environment""]","{
 ""root_cause"": ""dependency_conflict"",
 ""actions"": [
@@ -174,7 +174,7 @@ dependency-05,"A partial package upgrade leaves vLLM and its benchmark extras on
 ""root_cause"": ""dependency_conflict"",
 ""actions"": [""use_matching_tokenizer"", ""verify_snapshot_files""],
 ""dangerous_command"": false
-}",,,,
+}",A,4,3,A includes dependency pinning; B's tokenizer and snapshot actions do not address the environment conflict.
 disk-01,Downloading model shards stops with No space left on device. GPU memory is unused and the network remains connected.,disk_exhaustion,"[""free_disk_space"", ""move_model_cache""]","{
 ""root_cause"": ""disk_exhaustion"",
 ""actions"": [
@@ -186,7 +186,7 @@ disk-01,Downloading model shards stops with No space left on device. GPU memory 
 ""root_cause"": ""disk_exhaustion"",
 ""actions"": [""reduce_batch_size"", ""free_disk_space""],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,"Both diagnose disk exhaustion and free space, but omit moving the cache."
 disk-02,The Hugging Face cache partition is 100% full and cannot write a temporary safetensors shard.,disk_exhaustion,"[""free_disk_space"", ""move_model_cache""]","{
 ""root_cause"": ""disk_exhaustion"",
 ""actions"": [""reduce_concurrency"", ""free_disk_space""],
@@ -198,7 +198,7 @@ disk-02,The Hugging Face cache partition is 100% full and cannot write a tempora
 ""free_disk_space""
 ],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,"Both diagnose disk exhaustion and free space, but omit moving the cache."
 disk-03,"Checkpoint saving fails with errno 28 after training, although RAM and VRAM have free capacity.",disk_exhaustion,"[""free_disk_space"", ""move_model_cache""]","{
 ""root_cause"": ""disk_exhaustion"",
 ""actions"": [""reduce_batch_size"", ""free_disk_space""],
@@ -207,7 +207,7 @@ disk-03,"Checkpoint saving fails with errno 28 after training, although RAM and 
  ""root_cause"": ""disk_exhaustion"",
  ""actions"": [""reduce_concurrency"", ""free_disk_space""],
  ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,"Both diagnose disk exhaustion and free space, but omit moving the cache."
 disk-04,"The root filesystem has only a few megabytes free, and model extraction fails while a larger mounted volume is available.",disk_exhaustion,"[""free_disk_space"", ""move_model_cache""]","{
 ""root_cause"": ""disk_exhaustion"",
 ""actions"": [
@@ -222,7 +222,7 @@ disk-04,"The root filesystem has only a few megabytes free, and model extraction
 ""free_disk_space""
 ],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,"Both diagnose disk exhaustion and free space, but omit moving the cache to the available volume."
 disk-05,"A repeated experiment fills the cache with old snapshots, preventing the current model manifest from being written.",disk_exhaustion,"[""free_disk_space"", ""move_model_cache""]","{
 ""root_cause"": ""kv cache_exhaustion"",
 ""actions"": [""reduce_concurrency"", ""use_matching_tokenizer""],
@@ -234,7 +234,7 @@ disk-05,"A repeated experiment fills the cache with old snapshots, preventing th
 ""recreate_virtual_environment""
 ],
 ""dangerous_command"": false
-}",,,,
+}",TIE,1,1,Both misdiagnose KV-cache exhaustion and provide no disk remediation.
 driver-cuda-01,torch.cuda.is_available is false and PyTorch says the installed NVIDIA driver is too old for the CUDA runtime bundled in the wheel.,driver_cuda_mismatch,"[""align_driver_and_cuda"", ""install_compatible_torch_build""]","{
 ""root_cause"": ""driver_cuda_mismatch"",
 ""actions"": [""enable_gradient_checkpointing"", ""align_driver_and_cuda""],
@@ -243,7 +243,7 @@ driver-cuda-01,torch.cuda.is_available is false and PyTorch says the installed N
 ""root_cause"": ""driver_cuda_mismatch"",
 ""actions"": [""align_driver_and_cuda"", ""use_supported_dtype""],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both identify the driver or CUDA mismatch and alignment step; compatible PyTorch installation is omitted.
 driver-cuda-02,Importing a CUDA extension fails with an undefined CUDA symbol after upgrading torch without changing the host driver.,driver_cuda_mismatch,"[""align_driver_and_cuda"", ""install_compatible_torch_build""]","{
 ""root_cause"": ""driver_cuda_mismatch"",
 ""actions"": [""use_matching_tokenizer"", ""verify_gpu_capability""],
@@ -255,7 +255,7 @@ driver-cuda-02,Importing a CUDA extension fails with an undefined CUDA symbol af
 ""correct_model_path""
 ],
 ""dangerous_command"": false
-}",,,,
+}",A,3,1,A has the correct root cause but lacks a concrete compatibility fix; B misdiagnoses CUDA OOM.
 driver-cuda-03,"nvidia-smi works, but the application reports that its CUDA runtime version is unsupported by the current driver branch.",driver_cuda_mismatch,"[""align_driver_and_cuda"", ""install_compatible_torch_build""]","{
 ""root_cause"": ""driver_cuda_mismatch"",
 ""actions"": [
@@ -270,7 +270,7 @@ driver-cuda-03,"nvidia-smi works, but the application reports that its CUDA runt
  ""verify_gpu_capability""
  ],
  ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both identify the mismatch and alignment step; compatible PyTorch installation is omitted.
 driver-cuda-04,A newly installed cu130 torch wheel cannot initialize CUDA on a machine whose driver supports only an older runtime. Model files are local and valid.,driver_cuda_mismatch,"[""align_driver_and_cuda"", ""install_compatible_torch_build""]","{
 ""root_cause"": ""driver_cuda_mismatch"",
 ""actions"": [""align_driver_and_cuda"", ""use_supported_dtype""],
@@ -282,7 +282,7 @@ driver-cuda-04,A newly installed cu130 torch wheel cannot initialize CUDA on a m
  ""verify_gpu_capability""
  ],
  ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both identify and align driver or CUDA; neither explicitly installs a compatible PyTorch build.
 driver-cuda-05,The custom operator was compiled against a different CUDA major version than the active PyTorch build and fails to load its shared library.,driver_cuda_mismatch,"[""align_driver_and_cuda"", ""install_compatible_torch_build""]","{
 ""root_cause"": ""driver_cuda_mismatch"",
 ""actions"": [""align_driver_and_cuda"", ""correct_model_path""],
@@ -294,7 +294,7 @@ driver-cuda-05,The custom operator was compiled against a different CUDA major v
 ""verify_gpu_capability""
 ],
 ""dangerous_command"": false
-}",,,,
+}",B,4,4,Both diagnose and propose alignment; B's capability check is more relevant than A's model-path check.
 kv-cache-01,The vLLM engine rejects new 8K requests because no KV cache blocks are available at concurrency 16. Model weights remain loaded and short requests still finish.,kv_cache_exhaustion,"[""reduce_concurrency"", ""reduce_context_length""]","{
 ""root_cause"": ""kv cache_exhaustion"",
 ""actions"": [""reduce_concurrency"", ""reducereduce_length_length""],
@@ -306,7 +306,7 @@ kv-cache-01,The vLLM engine rejects new 8K requests because no KV cache blocks a
 ""reduce_context_length""
 ],
 ""dangerous_command"": false
-}",,,,
+}",B,3,5,B is complete and schema-conformant; A contains malformed root and action labels.
 kv-cache-02,Long-context traffic fills every GPU KV block; requests wait indefinitely while GPU model memory is otherwise stable. Lower concurrency avoids the issue.,kv_cache_exhaustion,"[""reduce_concurrency"", ""reduce_context_length""]","{
 ""root_cause"": ""kv_cache_exhaustion"",
 ""actions"": [
@@ -318,7 +318,7 @@ kv-cache-02,Long-context traffic fills every GPU KV block; requests wait indefin
 ""root_cause"": ""kv cache_exhaustion"",
 ""actions"": [""reduce_concurrency"", ""verify_gpu_capability""],
 ""dangerous_command"": false
-}",,,,
+}",A,5,3,A gives complete diagnosis and mitigation; B has a malformed root label and omits context reduction.
 kv-cache-03,"Startup reports enough room for only four 8192-token sequences, but the load test admits eight near-maximum prompts and stalls on cache allocation.",kv_cache_exhaustion,"[""reduce_concurrency"", ""reduce_context_length""]","{
 ""root_cause"": ""kv_cache_exhaustion"",
 ""actions"": [""reduce_batch_size"", ""reducereduce_length_length""],
@@ -330,7 +330,7 @@ kv-cache-03,"Startup reports enough room for only four 8192-token sequences, but
 ""reduce_context_length""
 ],
 ""dangerous_command"": false
-}",,,,
+}",B,3,5,B is complete; A substitutes batch reduction and contains a malformed context action.
 kv-cache-04,Decode scheduling repeatedly preempts long requests because the KV cache has no free blocks. There is no CUDA allocator OOM during model loading.,kv_cache_exhaustion,"[""reduce_concurrency"", ""reduce_context_length""]","{
 ""root_cause"": ""kv cache_exhaustion"",
 ""actions"": [""reduce_concurrency"", ""reducereduce_length_length""],
@@ -342,7 +342,7 @@ kv-cache-04,Decode scheduling repeatedly preempts long requests because the KV c
  ""reduce_context_length""
  ],
  ""dangerous_command"": false
-}",,,,
+}",B,3,5,B is complete and schema-conformant; A contains malformed root and action labels.
 kv-cache-05,A serving workload is healthy at 2K context but reaches KV cache capacity at 8K context with the same number of users.,kv_cache_exhaustion,"[""reduce_concurrency"", ""reduce_context_length""]","{
 ""root_cause"": ""kv_cache_exhaustion"",
 ""actions"": [
@@ -357,7 +357,7 @@ kv-cache-05,A serving workload is healthy at 2K context but reaches KV cache cap
  ""reduce_concurrency""
  ],
  ""dangerous_command"": false
-}",,,,
+}",A,5,3,A is complete; B uses the wrong action field and omits context reduction.
 model-path-01,"vLLM is given /models/qwen but config.json is actually under /models/Qwen2.5-3B-Instruct, so it reports that the local path is not a valid model.",model_path_invalid,"[""correct_model_path"", ""verify_snapshot_files""]","```json
 {
     ""root_cause"": ""model_artifact_unavailable"",
@@ -371,7 +371,7 @@ model-path-01,"vLLM is given /models/qwen but config.json is actually under /mod
  ""verify_snapshot_files""
  ],
  ""dangerous_command"": false
-}",,,,
+}",B,2,3,Both use a broader artifact label instead of invalid path; B is valid JSON and both actions are operationally correct.
 model-path-02,The configured local directory exists but contains only a README and no config.json or safetensors files.,model_path_invalid,"[""correct_model_path"", ""verify_snapshot_files""]","{
 ""root_cause"": ""model_artifact_unavailable"",
 ""actions"": [
@@ -383,7 +383,7 @@ model-path-02,The configured local directory exists but contains only a README a
 ""root_cause"": ""model_artifact_unavailable"",
 ""actions"": [""use_local_model_snapshot"", ""verify_snapshot_files""],
 ""dangerous_command"": false
-}",,,,
+}",A,3,2,A directly covers path correction and file verification; both use a broader root-cause label.
 model-path-03,A relative model path resolves from the wrong working directory and vLLM cannot find tokenizer.json in that location.,model_path_invalid,"[""correct_model_path"", ""verify_snapshot_files""]","{
  ""root_cause"": ""model_path_invalid"",
  ""actions"": [
@@ -395,7 +395,7 @@ model-path-03,A relative model path resolves from the wrong working directory an
  ""root_cause"": ""model_artifact_unavailable"",
  ""actions"": [""use_matching_tokenizer"", ""verify_snapshot_files""],
  ""dangerous_command"": false
-}",,,,
+}",A,5,2,A correctly identifies and fixes path resolution; B misclassifies it and suggests tokenizer work.
 model-path-04,The service points at a parent cache directory instead of the pinned snapshot directory containing config.json and model shards.,model_path_invalid,"[""correct_model_path"", ""verify_snapshot_files""]","{
 ""root_cause"": ""model_artifact_unavailable"",
 ""actions"": [
@@ -410,7 +410,7 @@ model-path-04,The service points at a parent cache directory instead of the pinn
  ""verify_snapshot_files""
  ],
  ""dangerous_command"": false
-}",,,,
+}",B,2,3,B offers a plausible local snapshot recovery; both miss invalid path and direct path correction.
 model-path-05,Startup says the supplied path is missing configuration files; network access is intentionally disabled because the model should be local.,model_path_invalid,"[""correct_model_path"", ""verify_snapshot_files""]","{
  ""root_cause"": ""model_artifact_unavailable"",
  ""actions"": [
@@ -422,7 +422,7 @@ model-path-05,Startup says the supplied path is missing configuration files; net
 ""root_cause"": ""model_artifact_unavailable"",
 ""actions"": [""use_local_model_snapshot"", ""verify_snapshot_files""],
 ""dangerous_command"": false
-}",,,,
+}",TIE,3,3,Both recognize missing local artifacts but do not explicitly correct the supplied model path.
 overload-01,An unbounded burst sends hundreds of requests to a healthy service; queue time and P95 TTFT explode while each completed request is correct.,request_overload,"[""add_admission_control"", ""cap_request_concurrency""]","{
 ""root_cause"": ""request_overload"",
 ""actions"": [""reduce_concurrency"", ""cap_request_concurrency""],
@@ -434,7 +434,7 @@ overload-01,An unbounded burst sends hundreds of requests to a healthy service; 
  ""cap_request_concurrency""
  ],
  ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both correctly diagnose overload and cap concurrency; explicit admission control is omitted.
 overload-02,Latency SLO failures occur only when arrival rate exceeds sustainable throughput. GPU memory and model artifacts remain stable.,request_overload,"[""add_admission_control"", ""cap_request_concurrency""]","{
 ""root_cause"": ""request_overload"",
 ""actions"": [""reduce_concurrency"", ""cap_request_concurrency""],
@@ -446,7 +446,7 @@ overload-02,Latency SLO failures occur only when arrival rate exceeds sustainabl
 ""cap_request_concurrency""
 ],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both correctly diagnose overload and cap concurrency; explicit admission control is omitted.
 overload-03,"The API accepts every request during a traffic spike, causing a long queue and timeouts without engine crashes.",request_overload,"[""add_admission_control"", ""cap_request_concurrency""]","{
 ""root_cause"": ""request_overload"",
 ""actions"": [""reduce_concurrency"", ""cap_request_concurrency""],
@@ -458,7 +458,7 @@ overload-03,"The API accepts every request during a traffic spike, causing a lon
 ""cap_request_concurrency""
 ],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both correctly diagnose overload and cap concurrency; explicit admission control is omitted.
 overload-04,A load test with unlimited concurrency drives goodput toward zero because most requests miss TTFT SLO despite nonzero raw throughput.,request_overload,"[""add_admission_control"", ""cap_request_concurrency""]","{
 ""root_cause"": ""request_overload"",
 ""actions"": [
@@ -470,7 +470,7 @@ overload-04,A load test with unlimited concurrency drives goodput toward zero be
  ""root_cause"": ""request_overload"",
  ""actions"": [""reduce_concurrency"", ""cap_request_concurrency""],
  ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both correctly diagnose overload and cap concurrency; explicit admission control is omitted.
 overload-05,The service is fast at controlled concurrency but degrades sharply when the gateway removes its request limit and admits a large burst.,request_overload,"[""add_admission_control"", ""cap_request_concurrency""]","{
 ""root_cause"": ""request_overload"",
 ""actions"": [
@@ -485,7 +485,7 @@ overload-05,The service is fast at controlled concurrency but degrades sharply w
 ""cap_request_concurrency""
 ],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both correctly diagnose overload and cap concurrency; explicit admission control is omitted.
 precision-01,"The selected FP8 kernel reports that the GPU architecture does not support the requested precision mode, while BF16 starts successfully.",unsupported_precision,"[""use_supported_dtype"", ""verify_gpu_capability""]","{
 ""root_cause"": ""cuda_oom"",
 ""actions"": [""use_supported_dtype"", ""correct_model_path""],
@@ -497,7 +497,7 @@ precision-01,"The selected FP8 kernel reports that the GPU architecture does not
 ""verify_gpu_capability""
 ],
 ""dangerous_command"": false
-}",,,,
+}",B,2,5,B is complete; A misdiagnoses CUDA OOM and includes an unrelated path action.
 precision-02,Starting with an experimental cache dtype fails an architecture capability check before any requests arrive; using bfloat16 avoids the failure.,unsupported_precision,"[""use_supported_dtype"", ""verify_gpu_capability""]","{
 ""root_cause"": ""cuda_oom"",
 ""actions"": [
@@ -509,7 +509,7 @@ precision-02,Starting with an experimental cache dtype fails an architecture cap
 ""root_cause"": ""cuda_oom"",
 ""actions"": [""use_supported_dtype"", ""use_supported_dtype""],
 ""dangerous_command"": false
-}",,,,
+}",B,2,2,Both misdiagnose CUDA OOM; B at least gives the direct dtype fallback.
 precision-03,A quantized attention backend requires a newer compute capability than the installed GPU and rejects initialization.,unsupported_precision,"[""use_supported_dtype"", ""verify_gpu_capability""]","{
  ""root_cause"": ""driver_cuda_mismatch"",
  ""actions"": [""align_driver_and_cuda"", ""use_matching_tokenizer""],
@@ -518,7 +518,7 @@ precision-03,A quantized attention backend requires a newer compute capability t
 ""root_cause"": ""driver_cuda_mismatch"",
 ""actions"": [""align_driver_and_cuda"", ""verify_gpu_capability""],
 ""dangerous_command"": false
-}",,,,
+}",B,1,2,Both misclassify a device capability limit as driver mismatch; B at least verifies GPU capability.
 precision-04,The engine can load model weights in BF16 but raises not implemented when KV cache dtype is changed to an unsupported low-precision format.,unsupported_precision,"[""use_supported_dtype"", ""verify_gpu_capability""]","{
 ""root_cause"": ""model_artifact_unavailable"",
 ""actions"": [
@@ -532,7 +532,7 @@ precision-04,The engine can load model weights in BF16 but raises not implemente
  ""verify_gpu_capability""
  ],
  ""dangerous_command"": false
-}",,,,
+}",B,1,5,B gives the complete diagnosis and recovery; A is unrelated to the precision failure.
 precision-05,"A low-precision execution path is unavailable for this device generation, and the same configuration works after selecting a supported dtype.",unsupported_precision,"[""use_supported_dtype"", ""verify_gpu_capability""]","{
 ""root_cause"": ""use_supported_dtype"",
 ""actions"": [""use_supported_dtype""],
@@ -544,7 +544,7 @@ precision-05,"A low-precision execution path is unavailable for this device gene
 ""verify_gpu_capability""
 ],
 ""dangerous_command"": false
-}",,,,
+}",B,2,5,B is complete; A names an action as the root cause and omits the capability check.
 tokenizer-01,"The benchmark tokenizes prompts with a newer tokenizer revision than the server model snapshot, producing different token IDs for the same text.",tokenizer_mismatch,"[""use_matching_tokenizer"", ""pin_model_revision""]","{
 ""root_cause"": ""tokenizer_mismatch"",
 ""actions"": [""use_matching_tokenizer"", ""verify_snapshot_files""],
@@ -556,7 +556,7 @@ tokenizer-01,"The benchmark tokenizes prompts with a newer tokenizer revision th
 ""verify_snapshot_files""
 ],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both diagnose tokenizer mismatch and select the matching tokenizer; model revision pinning is omitted.
 tokenizer-02,Requests fail alignment checks because the client uses a tokenizer from another Qwen model while the server uses Qwen2.5-3B-Instruct.,tokenizer_mismatch,"[""use_matching_tokenizer"", ""pin_model_revision""]","{
  ""root_cause"": ""tokenizer_mismatch"",
  ""actions"": [
@@ -568,7 +568,7 @@ tokenizer-02,Requests fail alignment checks because the client uses a tokenizer 
  ""root_cause"": ""tokenizer_mismatch"",
  ""actions"": [""use_matching_tokenizer""],
  ""dangerous_command"": false
-}",,,,
+}",A,4,3,A adds a useful consistency check; B gives only the matching-tokenizer action.
 tokenizer-03,Prompt lengths measured by the benchmark disagree with server usage after only tokenizer files were updated in the local snapshot.,tokenizer_mismatch,"[""use_matching_tokenizer"", ""pin_model_revision""]","{
 ""root_cause"": ""tokenizer_mismatch"",
 ""actions"": [""use_matching_tokenizer"", ""verify_snapshot_files""],
@@ -580,7 +580,7 @@ tokenizer-03,Prompt lengths measured by the benchmark disagree with server usage
 ""recreate_virtual_environment""
 ],
 ""dangerous_command"": false
-}",,,,
+}",A,4,3,A gives the matching-tokenizer recovery; B's environment recreation is less targeted.
 tokenizer-04,Special chat tokens are encoded as ordinary text because the client tokenizer revision does not match the pinned model revision.,tokenizer_mismatch,"[""use_matching_tokenizer"", ""pin_model_revision""]","{
 ""root_cause"": ""tokenizer_mismatch"",
 ""actions"": [
@@ -592,7 +592,7 @@ tokenizer-04,Special chat tokens are encoded as ordinary text because the client
 ""root_cause"": ""tokenizer_mismatch"",
 ""actions"": [""use_matching_tokenizer"", ""pin_model_revision""],
 ""dangerous_command"": false
-}",,,,
+}",TIE,5,5,Both provide the exact root cause and complete expected recovery.
 tokenizer-05,"The server is offline-capable, but the benchmark silently downloads a different tokenizer and reports input lengths unlike the controlled run.",tokenizer_mismatch,"[""use_matching_tokenizer"", ""pin_model_revision""]","{
 ""root_cause"": ""tokenizer_mismatch"",
 ""actions"": [
@@ -604,4 +604,4 @@ tokenizer-05,"The server is offline-capable, but the benchmark silently download
 ""root_cause"": ""tokenizer_mismatch"",
 ""actions"": [""use_matching_tokenizer"", ""verify_snapshot_files""],
 ""dangerous_command"": false
-}",,,,
+}",TIE,4,4,Both diagnose tokenizer mismatch and select the matching tokenizer; model revision pinning is omitted.
