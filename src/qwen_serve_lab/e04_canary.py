@@ -27,36 +27,50 @@ def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _load_dataset(path: str | Path) -> tuple[str, list[dict[str, str]]]:
+def load_canary_dataset(
+    path: str | Path, experiment: str = "E04"
+) -> tuple[str, list[dict[str, str]]]:
     dataset_path = Path(path)
     try:
         raw = dataset_path.read_bytes()
         data = json.loads(raw)
     except (OSError, json.JSONDecodeError) as exc:
-        raise ResultError(f"Cannot read E04 canary dataset {dataset_path}: {exc}") from exc
+        raise ResultError(
+            f"Cannot read {experiment} canary dataset {dataset_path}: {exc}"
+        ) from exc
     if not isinstance(data, dict) or data.get("schema_version") != 1:
-        raise ResultError("E04 canary dataset must use schema_version 1")
+        raise ResultError(f"{experiment} canary dataset must use schema_version 1")
     groups = data.get("groups")
     if not isinstance(groups, list) or not groups:
-        raise ResultError("E04 canary dataset must contain non-empty groups")
+        raise ResultError(
+            f"{experiment} canary dataset must contain non-empty groups"
+        )
 
     cases: list[dict[str, str]] = []
     identifiers: set[str] = set()
     for group in groups:
         if not isinstance(group, dict):
-            raise ResultError("E04 canary group must be an object")
+            raise ResultError(f"{experiment} canary group must be an object")
         name = group.get("name")
         prefix = group.get("shared_prefix")
         group_cases = group.get("cases")
         if not isinstance(name, str) or not name:
-            raise ResultError("E04 canary group name must be non-empty")
+            raise ResultError(
+                f"{experiment} canary group name must be non-empty"
+            )
         if not isinstance(prefix, str) or not prefix:
-            raise ResultError(f"E04 canary group {name} has no shared_prefix")
+            raise ResultError(
+                f"{experiment} canary group {name} has no shared_prefix"
+            )
         if not isinstance(group_cases, list) or len(group_cases) < 2:
-            raise ResultError(f"E04 canary group {name} needs at least two cases")
+            raise ResultError(
+                f"{experiment} canary group {name} needs at least two cases"
+            )
         for case in group_cases:
             if not isinstance(case, dict):
-                raise ResultError(f"E04 canary group {name} contains an invalid case")
+                raise ResultError(
+                    f"{experiment} canary group {name} contains an invalid case"
+                )
             case_id = case.get("id")
             question = case.get("question")
             expected = case.get("expected")
@@ -65,12 +79,16 @@ def _load_dataset(path: str | Path) -> tuple[str, list[dict[str, str]]]:
                 question,
                 expected,
             )):
-                raise ResultError(f"E04 canary group {name} has incomplete case data")
+                raise ResultError(
+                    f"{experiment} canary group {name} has incomplete case data"
+                )
             assert isinstance(case_id, str)
             assert isinstance(question, str)
             assert isinstance(expected, str)
             if case_id in identifiers:
-                raise ResultError(f"Duplicate E04 canary case id: {case_id}")
+                raise ResultError(
+                    f"Duplicate {experiment} canary case id: {case_id}"
+                )
             identifiers.add(case_id)
             prompt = f"{prefix}\n\nQuestion: {question}\nAnswer:"
             cases.append(
@@ -109,7 +127,7 @@ def _load_active_server(path: str | Path, state: str) -> dict[str, Any]:
     return marker
 
 
-def _request_completion(
+def request_canary_completion(
     base_url: str,
     served_model_name: str,
     prompt: str,
@@ -156,13 +174,15 @@ def run_e04_canary(
     served_model_name: str = "qwen2.5-3b-instruct",
     active_server_path: str | Path = "artifacts/server/active.json",
     timeout_seconds: float = 120,
-    request_completion: Callable[[str, str, str, float], dict[str, Any]] = _request_completion,
+    request_completion: Callable[
+        [str, str, str, float], dict[str, Any]
+    ] = request_canary_completion,
     metrics_fetcher: Callable[[str], str] = fetch_metrics,
 ) -> tuple[Path, bool]:
     if state not in EXPECTED_SERVER_PROFILES:
         raise ResultError("E04 canary state must be 'off' or 'on'")
     marker = _load_active_server(active_server_path, state)
-    dataset_sha256, cases = _load_dataset(dataset_path)
+    dataset_sha256, cases = load_canary_dataset(dataset_path)
     metrics_before = prefix_snapshot(metrics_fetcher(base_url))
     results: list[dict[str, Any]] = []
 

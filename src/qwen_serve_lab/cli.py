@@ -32,6 +32,8 @@ from qwen_serve_lab.e05_quality import (
     run_e05_quality,
     summarize_e05_human_review,
 )
+from qwen_serve_lab.e06 import write_e06_comparison
+from qwen_serve_lab.e06_canary import compare_e06_canary, run_e06_canary
 from qwen_serve_lab.config import (
     BenchmarkConfig,
     BenchmarkMatrix,
@@ -265,6 +267,52 @@ def _parser() -> argparse.ArgumentParser:
     )
     human_e05.add_argument(
         "--output-dir", type=Path, default=Path("reports/e05_kv_cache")
+    )
+    compare_e06 = subparsers.add_parser(
+        "compare-e06", help="Compare the four-cell E06 factorial experiment"
+    )
+    compare_e06.add_argument(
+        "--runs-csv",
+        type=Path,
+        default=Path("reports/e06_combined/runs.csv"),
+    )
+    compare_e06.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e06_combined")
+    )
+    run_e06_canary_parser = subparsers.add_parser(
+        "run-e06-canary", help="Run one E06 factorial correctness canary"
+    )
+    run_e06_canary_parser.add_argument(
+        "--state",
+        choices=("bt8192_off", "bt2048_off", "bt8192_on", "bt2048_on"),
+        required=True,
+    )
+    run_e06_canary_parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=Path("datasets/e04_correctness_canary.json"),
+    )
+    run_e06_canary_parser.add_argument(
+        "--result-root",
+        type=Path,
+        default=Path("artifacts/results/e06_correctness_canary"),
+    )
+    run_e06_canary_parser.add_argument(
+        "--base-url", default="http://127.0.0.1:8000"
+    )
+    run_e06_canary_parser.add_argument(
+        "--served-model-name", default="qwen2.5-3b-instruct"
+    )
+    compare_e06_canary_parser = subparsers.add_parser(
+        "compare-e06-canary", help="Compare all four E06 correctness canaries"
+    )
+    compare_e06_canary_parser.add_argument(
+        "--result-root",
+        type=Path,
+        default=Path("artifacts/results/e06_correctness_canary"),
+    )
+    compare_e06_canary_parser.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e06_combined")
     )
     return parser
 
@@ -892,6 +940,31 @@ def main(argv: list[str] | None = None) -> int:
                 args.review_csv,
                 args.review_key,
                 args.output_dir,
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0 if passed else 2
+        if args.command == "compare-e06":
+            csv_path, markdown_path = write_e06_comparison(
+                args.runs_csv, args.output_dir
+            )
+            print(csv_path)
+            print(markdown_path)
+            return 0
+        if args.command == "run-e06-canary":
+            output_path, valid = run_e06_canary(
+                state=args.state,
+                dataset_path=args.dataset,
+                result_root=args.result_root,
+                base_url=args.base_url,
+                served_model_name=args.served_model_name,
+            )
+            print(output_path)
+            return 0 if valid else 2
+        if args.command == "compare-e06-canary":
+            json_path, markdown_path, passed = compare_e06_canary(
+                result_root=args.result_root,
+                output_dir=args.output_dir,
             )
             print(json_path)
             print(markdown_path)

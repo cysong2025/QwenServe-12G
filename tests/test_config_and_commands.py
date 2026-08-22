@@ -210,6 +210,51 @@ class ServeConfigTests(unittest.TestCase):
         for field in controlled_fields:
             self.assertEqual(getattr(bf16, field), getattr(fp8, field))
 
+    def test_e06_profiles_form_a_controlled_two_by_two_factorial(self) -> None:
+        cells = {
+            (8192, False): ServeConfig.from_file(
+                ROOT / "configs/serve/e06_bt8192_apc_off.toml"
+            ),
+            (2048, False): ServeConfig.from_file(
+                ROOT / "configs/serve/e06_bt2048_apc_off.toml"
+            ),
+            (8192, True): ServeConfig.from_file(
+                ROOT / "configs/serve/e06_bt8192_apc_on.toml"
+            ),
+            (2048, True): ServeConfig.from_file(
+                ROOT / "configs/serve/e06_bt2048_apc_on.toml"
+            ),
+        }
+
+        controlled_fields = (
+            "model",
+            "revision",
+            "served_model_name",
+            "host",
+            "port",
+            "dtype",
+            "generation_config",
+            "max_model_len",
+            "gpu_memory_utilization",
+            "max_num_seqs",
+            "kv_cache_dtype",
+            "calculate_kv_scales",
+            "attention_backend",
+            "seed",
+            "enable_chunked_prefill",
+            "enable_per_request_metrics",
+            "wsl2_enable_pin_memory",
+            "use_flashinfer_sampler",
+        )
+        reference = cells[(8192, False)]
+        for (budget, apc), config in cells.items():
+            self.assertEqual(config.max_num_batched_tokens, budget)
+            self.assertEqual(config.enable_prefix_caching, apc)
+            self.assertEqual(config.attention_backend, "TRITON_ATTN")
+            self.assertEqual(config.kv_cache_dtype, "bfloat16")
+            for field in controlled_fields:
+                self.assertEqual(getattr(config, field), getattr(reference, field))
+
     def test_kv_scale_calculation_requires_fp8(self) -> None:
         config_text = (ROOT / "configs/serve/e05_kv_bf16.toml").read_text()
         config_text = config_text.replace(
@@ -377,6 +422,43 @@ class BenchmarkConfigTests(unittest.TestCase):
             self.assertEqual(control.seed, treatment.seed)
             self.assertEqual(control.repetition_seed_stride, 100)
             self.assertEqual(control.seed_for_repetition(3), control.seed + 200)
+
+    def test_e06_factorial_matrices_are_four_way_paired(self) -> None:
+        matrix_names = (
+            "e06_bt8192_apc_off",
+            "e06_bt2048_apc_off",
+            "e06_bt8192_apc_on",
+            "e06_bt2048_apc_on",
+        )
+        matrices = [
+            BenchmarkMatrix.from_file(ROOT / f"configs/matrix/{name}.toml")
+            for name in matrix_names
+        ]
+
+        self.assertTrue(all(len(matrix.configs) == 3 for matrix in matrices))
+        for configs in zip(*(matrix.configs for matrix in matrices), strict=True):
+            reference = configs[0]
+            for config in configs[1:]:
+                self.assertEqual(config.input_len, reference.input_len)
+                self.assertEqual(config.output_len, reference.output_len)
+                self.assertEqual(config.max_concurrency, 4)
+                self.assertEqual(config.prefix_len, reference.prefix_len)
+                self.assertEqual(config.suffix_len, reference.suffix_len)
+                self.assertEqual(config.num_prefixes, reference.num_prefixes)
+                self.assertEqual(config.seed, reference.seed)
+                self.assertEqual(config.repetition_seed_stride, 100)
+
+        capacity = [
+            BenchmarkMatrix.from_file(
+                ROOT / f"configs/matrix/{name}_capacity.toml"
+            ).configs[0]
+            for name in matrix_names
+        ]
+        for config in capacity:
+            self.assertEqual(config.max_concurrency, 8)
+            self.assertEqual(config.prefix_len, 1792)
+            self.assertEqual(config.nominal_reuse_percent, 90)
+            self.assertEqual(config.seed, 20260823 + 30000)
 
     def test_matrix_resume_skips_three_matching_valid_repetitions(self) -> None:
         matrix_path = ROOT / "configs/matrix/baseline.toml"

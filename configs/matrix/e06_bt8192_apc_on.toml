@@ -1,0 +1,58 @@
+[profile]
+name = "e06_bt8192_apc_on_matrix"
+server_profile = "e06_bt8192_apc_on"
+server_config = "../serve/e06_bt8192_apc_on.toml"
+
+[matrix]
+profile_prefix = "e06_bt8192_on"
+concurrencies = [4]
+result_root = "artifacts/results/e06_combined/bt8192_on"
+
+[[workloads]]
+name = "reuse0_p1024"
+input_len = 2048
+output_len = 256
+prefix_len = 1024
+suffix_len = 1024
+num_prefixes = 100
+seed_offset = 0
+
+[[workloads]]
+name = "reuse50_p1024"
+input_len = 2048
+output_len = 256
+prefix_len = 1024
+suffix_len = 1024
+num_prefixes = 50
+seed_offset = 10000
+
+[[workloads]]
+name = "reuse90_p1024"
+input_len = 2048
+output_len = 256
+prefix_len = 1024
+suffix_len = 1024
+num_prefixes = 10
+seed_offset = 20000
+
+[benchmark]
+model = "Qwen/Qwen2.5-3B-Instruct"
+served_model_name = "qwen2.5-3b-instruct"
+base_url = "http://127.0.0.1:8000"
+endpoint = "/v1/completions"
+dataset_name = "prefix_repetition"
+num_prompts = 100
+request_rate = "inf"
+burstiness = 1.0
+num_warmups = 0
+prewarm_prompts = 10
+metric_percentiles = [50, 95, 99]
+goodput_ttft_ms = 1000
+goodput_tpot_ms = 50
+seed = 20260823
+repetition_seed_stride = 100
+temperature = 0.0
+ignore_eos = true
+repetitions = 3
+cooldown_seconds = 30
+ready_check_timeout_seconds = 60

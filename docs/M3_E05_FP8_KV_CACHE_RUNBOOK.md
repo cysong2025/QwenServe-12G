@@ -1,5 +1,8 @@
 # E05 FP8 KV Cache 实验手册
 
+正式实验结论见 `docs/E05_RESULTS.md`。当前 E05 状态为
+`COMPLETE_WITH_QUALITY_REGRESSION`：容量门槛通过，自动质量和匿名人工质量门槛失败。
+
 ## 1. 实验问题
 
 E05 研究在 RTX 5070 12GB、WSL2、Qwen2.5-3B-Instruct 和 vLLM 0.25.1 条件下，将 KV Cache 从 BF16 改为 FP8 E4M3 后：

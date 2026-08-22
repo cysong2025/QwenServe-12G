@@ -6,6 +6,7 @@ E02_SERVE_CONFIG = configs/serve/e02_batch_tokens_$(E02_BUDGET).toml
 E02_MATRIX_CONFIG = configs/matrix/e02_batch_tokens_$(E02_BUDGET).toml
 
 .PHONY: doctor collect-env repair-bench-deps download-model-modelscope render-baseline render-baseline-local serve-baseline serve-baseline-local render-prefix render-baseline-matrix bench-smoke bench-baseline bench-baseline-matrix summarize-pilot summarize render-e02 render-e02-local serve-e02 serve-e02-local render-e02-matrix bench-e02-pilot bench-e02-matrix summarize-e02 compare-e02 render-e04-off-local render-e04-on-local serve-e04-off-local serve-e04-on-local render-e04-off-matrix render-e04-on-matrix bench-e04-off-pilot bench-e04-on-pilot bench-e04-off-matrix bench-e04-on-matrix bench-e04-off-capacity bench-e04-on-capacity summarize-e04 compare-e04 diagnose-e04 run-e04-canary-off run-e04-canary-on compare-e04-canary render-e05-bf16-local render-e05-fp8-local serve-e05-bf16-local serve-e05-fp8-local render-e05-bf16-matrix render-e05-fp8-matrix bench-e05-bf16-pilot bench-e05-fp8-pilot bench-e05-bf16-matrix bench-e05-fp8-matrix run-e05-quality-bf16 run-e05-quality-fp8 summarize-e05 compare-e05 capacity-e05 compare-e05-quality summarize-e05-human-review test
+.PHONY: render-e06-bt8192-off-local render-e06-bt2048-off-local render-e06-bt8192-on-local render-e06-bt2048-on-local serve-e06-bt8192-off-local serve-e06-bt2048-off-local serve-e06-bt8192-on-local serve-e06-bt2048-on-local render-e06-bt8192-off-matrix render-e06-bt2048-off-matrix render-e06-bt8192-on-matrix render-e06-bt2048-on-matrix bench-e06-bt8192-off-pilot bench-e06-bt2048-off-pilot bench-e06-bt8192-on-pilot bench-e06-bt2048-on-pilot bench-e06-bt8192-off-matrix bench-e06-bt2048-off-matrix bench-e06-bt8192-on-matrix bench-e06-bt2048-on-matrix run-e06-canary-bt8192-off run-e06-canary-bt2048-off run-e06-canary-bt8192-on run-e06-canary-bt2048-on summarize-e06 compare-e06 compare-e06-canary
 
 doctor:
 	$(QSL) doctor
@@ -187,6 +188,95 @@ compare-e05-quality:
 
 summarize-e05-human-review:
 	$(QSL) summarize-e05-human-review
+
+render-e06-bt8192-off-local:
+	$(QSL) render-serve configs/serve/e06_bt8192_apc_off.toml --model-path "$(MODEL_PATH)"
+
+render-e06-bt2048-off-local:
+	$(QSL) render-serve configs/serve/e06_bt2048_apc_off.toml --model-path "$(MODEL_PATH)"
+
+render-e06-bt8192-on-local:
+	$(QSL) render-serve configs/serve/e06_bt8192_apc_on.toml --model-path "$(MODEL_PATH)"
+
+render-e06-bt2048-on-local:
+	$(QSL) render-serve configs/serve/e06_bt2048_apc_on.toml --model-path "$(MODEL_PATH)"
+
+serve-e06-bt8192-off-local:
+	$(QSL) run-serve configs/serve/e06_bt8192_apc_off.toml --model-path "$(MODEL_PATH)"
+
+serve-e06-bt2048-off-local:
+	$(QSL) run-serve configs/serve/e06_bt2048_apc_off.toml --model-path "$(MODEL_PATH)"
+
+serve-e06-bt8192-on-local:
+	$(QSL) run-serve configs/serve/e06_bt8192_apc_on.toml --model-path "$(MODEL_PATH)"
+
+serve-e06-bt2048-on-local:
+	$(QSL) run-serve configs/serve/e06_bt2048_apc_on.toml --model-path "$(MODEL_PATH)"
+
+render-e06-bt8192-off-matrix:
+	$(QSL) render-matrix configs/matrix/e06_bt8192_apc_off.toml --tokenizer-path "$(MODEL_PATH)"
+	$(QSL) render-matrix configs/matrix/e06_bt8192_apc_off_capacity.toml --tokenizer-path "$(MODEL_PATH)"
+
+render-e06-bt2048-off-matrix:
+	$(QSL) render-matrix configs/matrix/e06_bt2048_apc_off.toml --tokenizer-path "$(MODEL_PATH)"
+	$(QSL) render-matrix configs/matrix/e06_bt2048_apc_off_capacity.toml --tokenizer-path "$(MODEL_PATH)"
+
+render-e06-bt8192-on-matrix:
+	$(QSL) render-matrix configs/matrix/e06_bt8192_apc_on.toml --tokenizer-path "$(MODEL_PATH)"
+	$(QSL) render-matrix configs/matrix/e06_bt8192_apc_on_capacity.toml --tokenizer-path "$(MODEL_PATH)"
+
+render-e06-bt2048-on-matrix:
+	$(QSL) render-matrix configs/matrix/e06_bt2048_apc_on.toml --tokenizer-path "$(MODEL_PATH)"
+	$(QSL) render-matrix configs/matrix/e06_bt2048_apc_on_capacity.toml --tokenizer-path "$(MODEL_PATH)"
+
+bench-e06-bt8192-off-pilot:
+	$(QSL) run-matrix configs/matrix/e06_bt8192_apc_off.toml --only e06_bt8192_off_reuse90_p1024_c4 --tokenizer-path "$(MODEL_PATH)" --skip-completed
+
+bench-e06-bt2048-off-pilot:
+	$(QSL) run-matrix configs/matrix/e06_bt2048_apc_off.toml --only e06_bt2048_off_reuse90_p1024_c4 --tokenizer-path "$(MODEL_PATH)" --skip-completed
+
+bench-e06-bt8192-on-pilot:
+	$(QSL) run-matrix configs/matrix/e06_bt8192_apc_on.toml --only e06_bt8192_on_reuse90_p1024_c4 --tokenizer-path "$(MODEL_PATH)" --skip-completed
+
+bench-e06-bt2048-on-pilot:
+	$(QSL) run-matrix configs/matrix/e06_bt2048_apc_on.toml --only e06_bt2048_on_reuse90_p1024_c4 --tokenizer-path "$(MODEL_PATH)" --skip-completed
+
+bench-e06-bt8192-off-matrix:
+	$(QSL) run-matrix configs/matrix/e06_bt8192_apc_off.toml --tokenizer-path "$(MODEL_PATH)" --skip-completed
+	$(QSL) run-matrix configs/matrix/e06_bt8192_apc_off_capacity.toml --tokenizer-path "$(MODEL_PATH)" --skip-completed
+
+bench-e06-bt2048-off-matrix:
+	$(QSL) run-matrix configs/matrix/e06_bt2048_apc_off.toml --tokenizer-path "$(MODEL_PATH)" --skip-completed
+	$(QSL) run-matrix configs/matrix/e06_bt2048_apc_off_capacity.toml --tokenizer-path "$(MODEL_PATH)" --skip-completed
+
+bench-e06-bt8192-on-matrix:
+	$(QSL) run-matrix configs/matrix/e06_bt8192_apc_on.toml --tokenizer-path "$(MODEL_PATH)" --skip-completed
+	$(QSL) run-matrix configs/matrix/e06_bt8192_apc_on_capacity.toml --tokenizer-path "$(MODEL_PATH)" --skip-completed
+
+bench-e06-bt2048-on-matrix:
+	$(QSL) run-matrix configs/matrix/e06_bt2048_apc_on.toml --tokenizer-path "$(MODEL_PATH)" --skip-completed
+	$(QSL) run-matrix configs/matrix/e06_bt2048_apc_on_capacity.toml --tokenizer-path "$(MODEL_PATH)" --skip-completed
+
+run-e06-canary-bt8192-off:
+	$(QSL) run-e06-canary --state bt8192_off
+
+run-e06-canary-bt2048-off:
+	$(QSL) run-e06-canary --state bt2048_off
+
+run-e06-canary-bt8192-on:
+	$(QSL) run-e06-canary --state bt8192_on
+
+run-e06-canary-bt2048-on:
+	$(QSL) run-e06-canary --state bt2048_on
+
+summarize-e06:
+	$(QSL) summarize --manifest-dir artifacts/env --output-dir reports/e06_combined --profile-prefix e06_
+
+compare-e06:
+	$(QSL) compare-e06
+
+compare-e06-canary:
+	$(QSL) compare-e06-canary
 
 test:
 	PYTHONPATH=src $(PYTHON) -m unittest discover -s tests -v

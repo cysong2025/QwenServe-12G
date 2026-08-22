@@ -1,0 +1,25 @@
+[profile]
+name = "e06_bt2048_apc_on"
+description = "E06 combined treatment with 2048 batch tokens and APC enabled"
+
+[server]
+model = "Qwen/Qwen2.5-3B-Instruct"
+revision = "a1d308dfcc03e09da285d49d912439a655a571e8"
+served_model_name = "qwen2.5-3b-instruct"
+host = "127.0.0.1"
+port = 8000
+dtype = "bfloat16"
+generation_config = "vllm"
+max_model_len = 8192
+gpu_memory_utilization = 0.82
+max_num_seqs = 8
+max_num_batched_tokens = 2048
+kv_cache_dtype = "bfloat16"
+calculate_kv_scales = false
+attention_backend = "TRITON_ATTN"
+seed = 20260823
+enable_prefix_caching = true
+enable_chunked_prefill = true
+enable_per_request_metrics = true
+wsl2_enable_pin_memory = true
+use_flashinfer_sampler = false

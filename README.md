@@ -18,13 +18,18 @@
 
 ## 当前状态
 
-Stage 0、M1 BF16 基线、M2 E02 batch token budget 和 E04 prefix reuse
-实验已在目标 RTX 5070 上完成。E02 包含 4 个 budget、6 种负载形状和 72 次
-有效 benchmark。E04 包含 12 个 profile、36 次有效 benchmark、1800 条随机
-输出诊断和 24 条固定自然语言 canary；结论状态为 `COMPLETE_WITH_LIMITATIONS`，
-因为原始随机-token逐字一致性门槛失败，但固定 canary 的 APC 等价性为 24/24 PASS。
-M3 E05 FP8 KV Cache 的受控服务配置、12-profile 长上下文矩阵、启动容量解析器、
-50 条 AI Infra 质量集和匿名人工复核流程已经冻结，等待目标 GPU 执行。
+Stage 0、M1 BF16 基线、M2 E02 batch token budget、E04 prefix reuse 和 E05
+FP8 KV Cache 已在目标 RTX 5070 上完成。E02 包含 72 次有效 benchmark；E04
+包含 36 次性能 benchmark、1800 条随机输出诊断和 24 条固定自然语言 canary，
+结论状态为 `COMPLETE_WITH_LIMITATIONS`。
+
+E05 包含 12 个 profile、36 次有效 benchmark、BF16/FP8 各 50 条固定质量请求和
+50 对匿名人工复核。FP8 KV token capacity 为 BF16 的 2.009x，但 schema 通过率
+从 92% 降至 70%，匿名人工均分从 3.680 降至 3.120，因此状态为
+`COMPLETE_WITH_QUALITY_REGRESSION`，FP8 不进入后续默认组合配置。
+
+E06 已冻结 `8192/2048 batch token budget x APC OFF/ON` 的 2x2 因子设计、
+48-run 配对矩阵、固定 canary 和交互效应比较器，等待目标 GPU 执行。
 
 ```text
 docs/                 项目章程、可行性与实验协议
@@ -130,6 +135,10 @@ E04 的 OFF/ON 配对、缓存隔离、实际 token 命中率采集和正式矩�
 E05 的 BF16/FP8 分时启动、长上下文配对矩阵、KV token capacity、自动质量门槛和
 50 条匿名人工复核步骤见
 [E05 FP8 KV Cache 实验手册](docs/M3_E05_FP8_KV_CACHE_RUNBOOK.md)。
+完整数据解读和部署边界见 [E05 实验结果](docs/E05_RESULTS.md)。
+
+E06 的四 cell 分时执行、组合收益门槛、因子交互和固定 canary 步骤见
+[E06 组合优化实验手册](docs/M3_E06_COMBINED_RUNBOOK.md)。
 
 详细边界和验收标准见 [项目章程](docs/PROJECT_CHARTER.md)、[可行性分析](docs/FEASIBILITY.md) 与 [实验协议](docs/EXPERIMENT_PROTOCOL.md)。
 
