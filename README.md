@@ -45,6 +45,10 @@ make prepare-e07-data
 make audit-e07-readiness
 ```
 
+在新的 Codex Agent 中继续项目时，先阅读
+[Codex Agent 交付文档](docs/CODEX_AGENT_HANDOFF.md)。其中集中记录当前分支、
+实验状态、WSL2 环境问题、冻结门槛、GPU 执行顺序和禁止过度宣称的边界。
+
 ## 核心结果
 
 | 实验 | 证据 | 结论 |
