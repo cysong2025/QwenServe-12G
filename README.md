@@ -39,18 +39,20 @@ rank-8、rank-16 训练和 Adapter 检查通过，36 次正式性能运行全部
 4 个因相对 TTFT 增幅超过冻结上限而失败。该结果记录为质量收益与在线成本之间的
 tradeoff，不推荐当前动态 LoRA 配置作为默认部署。
 
-**E08 token-aware 准入控制已完成协议、实现、测试与非 GPU readiness，目标 GPU
-实验尚未运行。** 三种策略、三条开放到达轨迹、27 个正式 cell、精确 trace 配对、
-SLO goodput 与长度公平性门槛已经冻结；readiness 为 `READY_FOR_GPU`，同时明确记录
-`GPU execution: DEFERRED` 和 `Scientific result: NOT_RUN`。在 pilot 和 27 次正式
-运行完成前，不把 E08 描述为完成或成功。
+**E08 token-aware 准入控制实验已完整执行，机器总体门槛为 `FAIL`。** 3 个 pilot
+和 27 个正式 cell 均有效；27 个 cell 唯一、9 组 profile/repetition trace 全部精确
+配对、排空后 pending 为 0，最大 admitted error rate 为 0.361%。token-aware 的
+公平性门槛通过，但 burst/overload 的中位 goodput 相对最佳基线分别为 -10.74% 和
+-15.34%，且 overload/r2 的 P95 TPOT 为 63.37 ms，超过冻结的 50 ms 上限。因此
+实验执行完成，但当前 token-aware 策略不是成功优化，也不推荐作为默认部署。
 
 E08 的 WSL2 执行顺序见
-[M4/E08 准入控制实验手册](docs/M4_E08_ADMISSION_RUNBOOK.md)。静态复核命令：
+[M4/E08 准入控制实验手册](docs/M4_E08_ADMISSION_RUNBOOK.md)，完整结果解读见
+[E08 准入控制实验结果](docs/E08_RESULTS.md)。使用 WSL 中保留的原始 artifacts
+可重建紧凑报告：
 
 ```bash
-make test
-make audit-e08-readiness
+make compare-e08; status=$?; test "$status" -eq 0 -o "$status" -eq 2
 ```
 
 使用 WSL 中保留的原始 artifacts 可重建 E07 最终报告：
@@ -73,10 +75,12 @@ make finalize-e07
 | E05 FP8 KV | 36 runs | KV 容量 2.009x，但 schema 92%->70%、匿名人工均分 3.680->3.120，不推荐默认部署 |
 | E06 组合 | 48 runs | 叠加收益在 reuse50-P1024/C4 和 reuse90-P1792/C8 成立，24/24 canary 一致 |
 | E07 QLoRA/LoRA | 36 runs | 自动质量和代理盲评 PASS，但 4/6 在线成本 cell 因 TTFT 回归 FAIL，不推荐当前动态 LoRA 默认部署 |
-| E08 准入控制 | 0 formal runs | 协议、实现与 readiness 完成；GPU pilot/正式矩阵尚未运行，无科学结果 |
+| E08 准入控制 | 27 runs | 证据完整且公平性 PASS，但 burst/overload goodput 增益为 -10.74%/-15.34%，overload/r2 TPOT 越线，总体 FAIL |
 
 完整数据解读、部署建议、故障诊断和有效性边界见
 [E01-E06 最终技术报告](docs/E01_E06_FINAL_REPORT.md)。
+E07/E08 的后续负面结果见 [E07 结果](docs/E07_RESULTS.md) 和
+[E08 结果](docs/E08_RESULTS.md)。
 简历表述、面试深挖点和禁止过度宣称的边界见
 [E01-E06 面试讲述指南](docs/INTERVIEW_GUIDE_E01_E06.md)。
 

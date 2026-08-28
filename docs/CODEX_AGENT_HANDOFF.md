@@ -1,6 +1,6 @@
 # Codex Agent Handoff
 
-Last updated: 2026-08-28
+Last updated: 2026-08-29
 
 This document is the handoff entry point for continuing QwenServe-12G in a new
 Codex task. Read it before changing code or asking the user to run GPU work.
@@ -25,20 +25,26 @@ The main question is:
 - GitHub repository: `git@github.com:cysong2025/QwenServe-12G.git`
 - Active branch: `codex/e08-admission`
 - Mac workspace: `/Users/songchuangye/Documents/推理训练`
-- WSL2 workspace: `~/projects/QwenServe-12G`
+- WSL2 E08 workspace: `~/projects/QwenServe-12G-e08`
 - E01-E06: complete; 228 formal benchmark runs; structured audit `PASS`.
 - E07: execution complete; 36 formal benchmark runs are `VALID`, automated and
   delegated-Agent blind quality gates pass, but four of six online-cost cells
   fail the frozen TTFT overhead limit. Final machine status is `FAIL`.
-- E08 token-aware admission control: protocol/code/readiness prepared; target
-  GPU pilot and 27 formal runs have not started.
-- CPU/static verification at handoff: 80 tests passed.
+- E08: execution complete; 3 pilot and 27 formal runs are `VALID`, exact-trace
+  pairing and fairness pass, but both overload goodput gates fail and one
+  token-aware repetition exceeds the frozen TPOT SLO. Final status is `FAIL`.
+- CPU/static verification at handoff: 81 tests passed.
 - Completed E07 online matrix: 36 formal runs, comprising Base and rank-8 LoRA,
   six workload/concurrency cells each, three repetitions per cell; error rate 0.
 
 E07 execution is complete, but do not relabel its overall `FAIL` as successful
 deployment. The measured quality gain coexists with unacceptable online TTFT
 overhead in four frozen cells.
+
+E08 execution is also complete, but the tested token-aware policy is not a
+successful default. Burst/steady-overload median goodput gains versus the best
+baseline are -10.74%/-15.34%, and steady-overload repetition 2 has 63.37 ms
+P95 TPOT versus the frozen 50 ms limit.
 
 One user-owned untracked file existed at handoff:
 
@@ -59,6 +65,7 @@ that action.
 | E05 | FP8 KV cache | KV capacity is about 2.009x, but schema quality fell from 92% to 70% and blind-review score from 3.680 to 3.120; FP8 is not the default recommendation. |
 | E06 | Combined optimization | Benefits are workload-dependent; frozen correctness canary passed 24/24. |
 | E07 | QLoRA and LoRA serving | Adapter/automated quality/delegated-Agent blind quality PASS; online cost FAIL in short C1/C4/C8 and medium C1, so current dynamic LoRA is not the default deployment. |
+| E08 | Token-aware admission | 27/27 formal cells are valid and paired; fairness PASS, but both overload goodput gates and one per-repetition TPOT SLO fail, so the current policy is not the default deployment. |
 
 Important truth boundaries:
 
@@ -222,11 +229,12 @@ The cells are short `128/128` and medium `512/256`, each at concurrency 1, 4,
 and 8, with three repetitions. The pilot cell belongs to the matrix and valid
 pilot repetitions are skipped by the formal matrix runner.
 
-## 8. Exact E08 continuation sequence
+## 8. E08 execution record and reproduction sequence
 
-E08 code and protocol are prepared on `codex/e08-admission`, but target-GPU
-execution has not started. The authoritative sequence is
-`docs/M4_E08_ADMISSION_RUNBOOK.md`.
+E08 target-GPU execution is complete on `codex/e08-admission`. The sequence
+below is retained for reproduction; the authoritative protocol remains
+`docs/M4_E08_ADMISSION_RUNBOOK.md`, and the measured interpretation is in
+`docs/E08_RESULTS.md`.
 
 First update and inspect the WSL checkout. When using the Windows/WSL SSH lab,
 probe the connection and inspect remote branch/status/revision before any sync.
@@ -295,6 +303,10 @@ Exit code 2 may be a valid negative scientific result. Do not tune frozen
 rates, budgets, SLOs, fairness thresholds, or the 10% best-baseline goodput
 gate after seeing formal data.
 
+The completed comparison returned 2 with `reports/e08_admission/final.json`
+status `FAIL`. This is the expected machine representation of the preserved
+negative scientific result, not an execution failure.
+
 ## 9. E08 expected evidence and completion criteria
 
 Expected WSL-only raw outputs include:
@@ -315,9 +327,13 @@ share the same trace hash per profile/repetition, evidence validity passes,
 and the frozen report records either `PASS` or a preserved scientific `FAIL`.
 Readiness and pilot output alone are never E08 completion evidence.
 
+That completion condition is now satisfied: 27/27 unique formal cells are
+valid, all nine trace groups pair exactly, warmups and drains are complete, and
+the frozen final status is `FAIL`.
+
 Do not commit model weights, Adapter `.safetensors`, or detailed request-level
 artifacts. Raw artifacts stay on the WSL2 host. Commit only the compact reports
-and manifests listed by the E07 runbook.
+listed by the E08 runbook.
 
 ## 10. Important code and document map
 
@@ -334,9 +350,11 @@ and manifests listed by the E07 runbook.
 - `src/qwen_serve_lab/e07*.py`: data, training, inspection, quality, comparison,
   blind-review, readiness, and finalization logic.
 - `docs/M4_E08_ADMISSION_RUNBOOK.md`: authoritative E08 protocol and GPU order.
+- `docs/E08_RESULTS.md`: measured E08 result, deployment decision, and limits.
 - `configs/admission/e08.toml`: frozen traces, policies, AIMD, and gates.
 - `src/qwen_serve_lab/e08*.py`: admission, runner, comparison, and readiness.
-- `reports/e08_admission/readiness.md`: pre-GPU audit only, not a result.
+- `reports/e08_admission/comparison.md` and `final.json`: completed E08 result.
+- `reports/e08_admission/readiness.md`: retained pre-GPU audit, not the result.
 - `Makefile`: operator-facing entry points.
 
 Before editing, inspect `git status`, the latest commit, relevant tests, and the
@@ -349,9 +367,9 @@ The user can start the next Codex task with:
 
 ```text
 继续 QwenServe-12G 项目。请先阅读 docs/CODEX_AGENT_HANDOFF.md，检查当前
-git status、分支和最新提交，再阅读 docs/M4_E08_ADMISSION_RUNBOOK.md 与 E08
-readiness。E01-E07 已完成；E07 在线成本总体 FAIL。E08 代码和冻结协议已准备，
-但 GPU pilot 与 27 次正式实验尚未运行。通过 ai-fpga-windows SSH 实验室执行时，
-先检查远程 dirty/branch/revision。不要触碰 reports/e05_kv_cache/
-human_review.backup.csv，也不要提前把 E08 描述为完成。
+git status、分支和最新提交。E01-E08 已执行完成；E07 在线成本总体 FAIL，E08
+证据完整但冻结科学门槛总体 FAIL。E08 原始 artifacts 保留在 WSL2 的
+~/projects/QwenServe-12G-e08，Git 只提交紧凑报告。不要触碰
+reports/e05_kv_cache/human_review.backup.csv，也不要把 E07/E08 的负面结果
+描述为成功部署。
 ```
