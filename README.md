@@ -37,8 +37,21 @@ E04 保留随机-token严格输出门槛的限制，E05 保留 FP8 质量回归�
 rank-8、rank-16 训练和 Adapter 检查通过，36 次正式性能运行全部有效且错误率为
 0；自动质量与用户委托的 Agent 代理盲评门槛通过，但 6 个在线成本 cell 中有
 4 个因相对 TTFT 增幅超过冻结上限而失败。该结果记录为质量收益与在线成本之间的
-tradeoff，不推荐当前动态 LoRA 配置作为默认部署。E08 token-aware 准入控制仍
-属于后续里程碑。
+tradeoff，不推荐当前动态 LoRA 配置作为默认部署。
+
+**E08 token-aware 准入控制已完成协议、实现、测试与非 GPU readiness，目标 GPU
+实验尚未运行。** 三种策略、三条开放到达轨迹、27 个正式 cell、精确 trace 配对、
+SLO goodput 与长度公平性门槛已经冻结；readiness 为 `READY_FOR_GPU`，同时明确记录
+`GPU execution: DEFERRED` 和 `Scientific result: NOT_RUN`。在 pilot 和 27 次正式
+运行完成前，不把 E08 描述为完成或成功。
+
+E08 的 WSL2 执行顺序见
+[M4/E08 准入控制实验手册](docs/M4_E08_ADMISSION_RUNBOOK.md)。静态复核命令：
+
+```bash
+make test
+make audit-e08-readiness
+```
 
 使用 WSL 中保留的原始 artifacts 可重建 E07 最终报告：
 
@@ -60,6 +73,7 @@ make finalize-e07
 | E05 FP8 KV | 36 runs | KV 容量 2.009x，但 schema 92%->70%、匿名人工均分 3.680->3.120，不推荐默认部署 |
 | E06 组合 | 48 runs | 叠加收益在 reuse50-P1024/C4 和 reuse90-P1792/C8 成立，24/24 canary 一致 |
 | E07 QLoRA/LoRA | 36 runs | 自动质量和代理盲评 PASS，但 4/6 在线成本 cell 因 TTFT 回归 FAIL，不推荐当前动态 LoRA 默认部署 |
+| E08 准入控制 | 0 formal runs | 协议、实现与 readiness 完成；GPU pilot/正式矩阵尚未运行，无科学结果 |
 
 完整数据解读、部署建议、故障诊断和有效性边界见
 [E01-E06 最终技术报告](docs/E01_E06_FINAL_REPORT.md)。
@@ -79,6 +93,7 @@ configs/serve/        vLLM 服务对照配置
 configs/bench/        benchmark 工作负载配置
 configs/matrix/       可展开的正式实验矩阵
 configs/train/        QLoRA smoke、主实验与 rank 消融配置
+configs/admission/    E08 开放到达轨迹、策略与冻结门槛
 src/qwen_serve_lab/   配置校验、命令生成与环境采集
 scripts/              WSL2 初始化入口
 artifacts/            环境快照和原始实验结果，不提交大文件

@@ -1,6 +1,6 @@
 # Codex Agent Handoff
 
-Last updated: 2026-08-24
+Last updated: 2026-08-28
 
 This document is the handoff entry point for continuing QwenServe-12G in a new
 Codex task. Read it before changing code or asking the user to run GPU work.
@@ -23,15 +23,16 @@ The main question is:
 ## 2. Current handoff state
 
 - GitHub repository: `git@github.com:cysong2025/QwenServe-12G.git`
-- Active branch: `codex/e07-lora`
+- Active branch: `codex/e08-admission`
 - Mac workspace: `/Users/songchuangye/Documents/推理训练`
 - WSL2 workspace: `~/projects/QwenServe-12G`
 - E01-E06: complete; 228 formal benchmark runs; structured audit `PASS`.
 - E07: execution complete; 36 formal benchmark runs are `VALID`, automated and
   delegated-Agent blind quality gates pass, but four of six online-cost cells
   fail the frozen TTFT overhead limit. Final machine status is `FAIL`.
-- E08 token-aware admission control: future milestone, not started.
-- CPU/static verification at handoff: 70 tests passed.
+- E08 token-aware admission control: protocol/code/readiness prepared; target
+  GPU pilot and 27 formal runs have not started.
+- CPU/static verification at handoff: 80 tests passed.
 - Completed E07 online matrix: 36 formal runs, comprising Base and rank-8 LoRA,
   six workload/concurrency cells each, three repetitions per cell; error rate 0.
 
@@ -148,12 +149,14 @@ does not disable every FlashInfer feature. The attention backend is pinned to
 
 ## 6. Operating model with the user
 
-The user develops through Codex on Mac and manually executes GPU commands on
-Windows/WSL2, often over SSH. The new Agent should:
+The user develops through Codex on Mac and has authorized direct work on the
+Windows/WSL2 GPU lab through the `ai-fpga-windows` SSH alias. The new Agent
+should:
 
 1. Make and test CPU/static code changes on Mac.
-2. Commit and push them to `codex/e07-lora` over Git SSH.
-3. Give direct, copyable commands in execution order, not only a manual link.
+2. Commit and push them to the active `codex/*` branch over Git SSH.
+3. Use the Windows/WSL lab helper for non-interactive remote work when safe;
+   still give direct, copyable commands when user action is needed.
 4. Clearly label terminal 1 as the long-running server and terminal 2 as the
    benchmark/evaluation terminal.
 5. Ask the user to paste the earliest relevant error or generated report, then
@@ -219,182 +222,98 @@ The cells are short `128/128` and medium `512/256`, each at concurrency 1, 4,
 and 8, with three repetitions. The pilot cell belongs to the matrix and valid
 pilot repetitions are skipped by the formal matrix runner.
 
-## 8. Exact continuation sequence
+## 8. Exact E08 continuation sequence
 
-### Step A: update and verify WSL2 checkout
+E08 code and protocol are prepared on `codex/e08-admission`, but target-GPU
+execution has not started. The authoritative sequence is
+`docs/M4_E08_ADMISSION_RUNBOOK.md`.
+
+First update and inspect the WSL checkout. When using the Windows/WSL SSH lab,
+probe the connection and inspect remote branch/status/revision before any sync.
+Do not pull across a dirty remote worktree.
 
 ```bash
 cd ~/projects/QwenServe-12G
-git remote set-url origin git@github.com:cysong2025/QwenServe-12G.git
 git fetch origin
-git switch codex/e07-lora
-git pull --ff-only origin codex/e07-lora
-
+git switch codex/e08-admission
+git pull --ff-only origin codex/e08-admission
 source .venv/bin/activate
 make test
-make prepare-e07-data
-make audit-e07-readiness
-sed -n '1,220p' reports/e07_lora/readiness.md
+make prepare-e08-traces
+make audit-e08-readiness
+sed -n '1,220p' reports/e08_admission/readiness.md
 ```
 
-Continue only if readiness is `READY_FOR_GPU`.
+Continue only if the audit says `READY_FOR_GPU`, while still stating
+`GPU execution: DEFERRED` and `Scientific result: NOT_RUN`.
 
-### Step B: install pinned training dependencies
-
-```bash
-make install-e07-train-deps
-python -c 'import accelerate, bitsandbytes, peft; print(accelerate.__version__, bitsandbytes.__version__, peft.__version__)'
-```
-
-Do not upgrade unrelated packages between Base and LoRA measurements.
-
-### Step C: run QLoRA smoke
-
-```bash
-pgrep -af 'vllm serve' || true
-nvidia-smi
-make render-e07-smoke
-make train-e07-smoke
-
-PYTHONPATH=src python3 -m qwen_serve_lab.cli inspect-e07-adapter \
-  --adapter-dir artifacts/adapters/e07/smoke-r8 \
-  --expected-rank 8 \
-  --output-dir reports/e07_lora/smoke
-```
-
-Then validate loading. In terminal 1:
+Terminal 1 starts the controlled E06 Base/BF16 server and remains running:
 
 ```bash
 cd ~/projects/QwenServe-12G
 source .venv/bin/activate
-make serve-e07-lora-local E07_ADAPTER_PATH=artifacts/adapters/e07/smoke-r8
+make serve-e08-local
 ```
 
-After startup, in terminal 2:
-
-```bash
-curl -s http://127.0.0.1:8000/v1/models | python -m json.tool
-```
-
-The model list must contain `ai-infra-triage-r8`. Stop terminal 1 before formal
-training.
-
-### Step D: formal rank-8 and rank-16 training
+After `Application startup complete`, Terminal 2 verifies the endpoint and
+runs the three-policy pilot:
 
 ```bash
 cd ~/projects/QwenServe-12G
 source .venv/bin/activate
-pgrep -af 'vllm serve' || true
-nvidia-smi
-
-make train-e07-rank8
-make inspect-e07-adapter
-sed -n '1,160p' reports/e07_lora/adapter.md
-
-make train-e07-rank16
-PYTHONPATH=src python3 -m qwen_serve_lab.cli inspect-e07-adapter \
-  --adapter-dir artifacts/adapters/e07/rank16 \
-  --expected-rank 16 \
-  --output-dir reports/e07_lora/rank16
+curl -fsS http://127.0.0.1:8000/v1/models | python -m json.tool
+make bench-e08-pilot-unbounded
+sleep 30
+make bench-e08-pilot-fixed
+sleep 30
+make bench-e08-pilot-token
 ```
 
-### Step E: Base measurements
-
-Terminal 1:
+Only after all three pilot documents are `valid: true` and share a trace hash,
+run the 27-cell formal matrix:
 
 ```bash
-cd ~/projects/QwenServe-12G
-source .venv/bin/activate
-make serve-e07-base-local
+make bench-e08-matrix
 ```
 
-Terminal 2, only after startup completes:
+The matrix uses three 180-second profiles, three policies, three repetitions,
+balanced policy order, and 30-second cooldowns. It refuses to overwrite an
+existing cell and stops on invalid evidence. Resume preserved cells with:
 
 ```bash
-cd ~/projects/QwenServe-12G
-source .venv/bin/activate
-make bench-e07-base-pilot
-make run-e07-quality-base
-make bench-e07-base-matrix
+make bench-e08-matrix-resume
 ```
 
-Stop terminal 1 after all three commands finish.
-
-### Step F: rank-8 LoRA measurements
-
-Terminal 1:
+After all formal runs:
 
 ```bash
-cd ~/projects/QwenServe-12G
-source .venv/bin/activate
-make serve-e07-lora-local
+make compare-e08; status=$?; test "$status" -eq 0 -o "$status" -eq 2
+sed -n '1,240p' reports/e08_admission/comparison.md
 ```
 
-Terminal 2, only after startup completes:
+Exit code 2 may be a valid negative scientific result. Do not tune frozen
+rates, budgets, SLOs, fairness thresholds, or the 10% best-baseline goodput
+gate after seeing formal data.
 
-```bash
-cd ~/projects/QwenServe-12G
-source .venv/bin/activate
-make bench-e07-lora-pilot
-make run-e07-quality-lora
-make bench-e07-lora-matrix
-```
+## 9. E08 expected evidence and completion criteria
 
-Stop terminal 1 when complete.
+Expected WSL-only raw outputs include:
 
-### Step G: comparisons, blind review, and final report
-
-```bash
-make summarize-e07
-make compare-e07
-make compare-e07-quality
-sed -n '1,220p' reports/e07_lora/comparison.md
-sed -n '1,220p' reports/e07_lora/quality.md
-```
-
-Complete all blank scoring fields in
-`reports/e07_lora/human_review.csv` without opening the blind key. Then:
-
-```bash
-make summarize-e07-human-review
-make finalize-e07
-sed -n '1,220p' reports/e07_lora/final.md
-```
-
-Detailed operator commands and failure handling live in
-`docs/M3_E07_QLORA_LORA_RUNBOOK.md`.
-
-## 9. Expected evidence and completion criteria
-
-Expected local-only outputs include:
-
-- `artifacts/adapters/e07/smoke-r8/`
-- `artifacts/adapters/e07/rank8/`
-- `artifacts/adapters/e07/rank16/`
-- `artifacts/results/e07_training/`
-- detailed Base and LoRA benchmark/quality JSON
+- `artifacts/results/e08_admission/traces/` deterministic request traces;
+- `artifacts/results/e08_admission/runs/` request-level policy decisions,
+  streaming timings, controller state, environment snapshots, and telemetry.
 
 Expected compact report outputs include:
 
-- `reports/e07_lora/adapter.json` and `adapter.md`
-- `reports/e07_lora/runs.csv` and `summary.md`
-- `reports/e07_lora/comparison.csv` and `comparison.md`
-- `reports/e07_lora/quality.json` and `quality.md`
-- `reports/e07_lora/human_review.csv`
-- `reports/e07_lora/human_review_key.json`
-- `reports/e07_lora/human_review_summary.json` and `.md`
-- `reports/e07_lora/final.json` and `final.md`
+- `reports/e08_admission/runs.csv`;
+- `reports/e08_admission/comparison.csv` and `comparison.md`;
+- `reports/e08_admission/final.json`;
+- `reports/e08_admission/readiness.json` and `readiness.md`.
 
-E07 completion criteria, satisfied by the preserved WSL evidence and compact
-reports:
-
-1. Smoke, rank-8, and rank-16 training evidence is preserved.
-2. The primary rank-8 Adapter passes structural/hash inspection.
-3. Base and LoRA quality evaluations exist for the frozen dataset.
-4. All 36 planned performance repetitions are accounted for and valid.
-5. Blind review is complete without unblinding during scoring.
-6. `final.md` records pass or fail against every frozen gate.
-7. Compact reproducible evidence is committed; negative results remain intact.
+E08 is complete only when all 27 formal cells exist exactly once, all policies
+share the same trace hash per profile/repetition, evidence validity passes,
+and the frozen report records either `PASS` or a preserved scientific `FAIL`.
+Readiness and pilot output alone are never E08 completion evidence.
 
 Do not commit model weights, Adapter `.safetensors`, or detailed request-level
 artifacts. Raw artifacts stay on the WSL2 host. Commit only the compact reports
@@ -414,6 +333,10 @@ and manifests listed by the E07 runbook.
 - `configs/matrix/e07_*.toml`: frozen Base/LoRA performance matrices.
 - `src/qwen_serve_lab/e07*.py`: data, training, inspection, quality, comparison,
   blind-review, readiness, and finalization logic.
+- `docs/M4_E08_ADMISSION_RUNBOOK.md`: authoritative E08 protocol and GPU order.
+- `configs/admission/e08.toml`: frozen traces, policies, AIMD, and gates.
+- `src/qwen_serve_lab/e08*.py`: admission, runner, comparison, and readiness.
+- `reports/e08_admission/readiness.md`: pre-GPU audit only, not a result.
 - `Makefile`: operator-facing entry points.
 
 Before editing, inspect `git status`, the latest commit, relevant tests, and the
@@ -426,9 +349,9 @@ The user can start the next Codex task with:
 
 ```text
 继续 QwenServe-12G 项目。请先阅读 docs/CODEX_AGENT_HANDOFF.md，检查当前
-git status、分支和最新提交，再阅读 docs/E07_RESULTS.md 与 E07 final reports。
-E01-E07 已完成；E07 的质量门槛通过但在线成本总体 FAIL，代理盲评不是独立人类
-研究。当前后续里程碑是尚未启动的 E08 token-aware 准入控制。保持既有冻结实验
-门槛，不要触碰 reports/e05_kv_cache/human_review.backup.csv，也不要把 E07
-负结果改写成成功部署。
+git status、分支和最新提交，再阅读 docs/M4_E08_ADMISSION_RUNBOOK.md 与 E08
+readiness。E01-E07 已完成；E07 在线成本总体 FAIL。E08 代码和冻结协议已准备，
+但 GPU pilot 与 27 次正式实验尚未运行。通过 ai-fpga-windows SSH 实验室执行时，
+先检查远程 dirty/branch/revision。不要触碰 reports/e05_kv_cache/
+human_review.backup.csv，也不要提前把 E08 描述为完成。
 ```
