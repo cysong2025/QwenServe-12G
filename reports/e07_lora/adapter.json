@@ -1,0 +1,282 @@
+{
+  "passed": true,
+  "adapter_dir": "artifacts/adapters/e07/rank8",
+  "rank": 8,
+  "checks": {
+    "adapter_kind": true,
+    "rank": true,
+    "expected_rank": true,
+    "training_manifest": true,
+    "manifest_rank": true,
+    "weights_hash": true,
+    "weight_nonempty": true
+  },
+  "adapter_config_sha256": "be77d6e1f61b787c0efd2407da6a079b1e521398cd7a0bc72eece2e34f8cb4dd",
+  "adapter_weights_sha256": "e930d284cc29e47e88976d16699d00c5883b0a811d29a08ef85763c0e5b98fe9",
+  "training_manifest_sha256": "bf966967b8aa09eb072917f78a056026b4e190fb5e8b42cb7fe2809db755ae86",
+  "training_manifest": {
+    "schema_version": 1,
+    "kind": "e07_training_manifest",
+    "status": "COMPLETE",
+    "created_at": "2026-08-27T17:24:16.384714+00:00",
+    "profile": "e07_qlora_rank8",
+    "config": {
+      "profile_name": "e07_qlora_rank8",
+      "description": "E07 primary rank-8 QLoRA training profile",
+      "source_path": "/home/user/projects/QwenServe-12G/configs/train/e07_qlora_rank8.toml",
+      "source_sha256": "b5f9c70b555882dd972bc3ba613b4a365b8b2a1a06cf5c11d8b6e8a686f6d141",
+      "model": "Qwen/Qwen2.5-3B-Instruct",
+      "revision": "a1d308dfcc03e09da285d49d912439a655a571e8",
+      "train_file": "datasets/e07_sft/train.jsonl",
+      "validation_file": "datasets/e07_sft/validation.jsonl",
+      "dataset_manifest": "datasets/e07_sft/dataset_manifest.json",
+      "output_dir": "artifacts/adapters/e07/rank8",
+      "rank": 8,
+      "alpha": 16,
+      "dropout": 0.05,
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ],
+      "max_seq_length": 1024,
+      "micro_batch_size": 1,
+      "gradient_accumulation_steps": 16,
+      "epochs": 3.0,
+      "max_steps": 0,
+      "learning_rate": 0.0002,
+      "warmup_ratio": 0.05,
+      "max_train_samples": 0,
+      "seed": 20260824,
+      "gradient_checkpointing": true
+    },
+    "model_path": "/home/user/models/Qwen2.5-3B-Instruct",
+    "model_config_sha256": "eed00b17e22553979d090fa492e587e92885e328914c8e0b0b78f0a0d3576b3b",
+    "model_manifest_sha256": "469c2bad3b98a203e1abef6fbb0b85871d0c152327c1a57afb50343b0b8aa59e",
+    "dataset_manifest": "datasets/e07_sft/dataset_manifest.json",
+    "dataset_manifest_sha256": "4aff876f03310a301a4936fc26ec5b2eba6083c84de33bb8c3174d33b6fd117e",
+    "train_rows": 250,
+    "validation_rows": 100,
+    "trainable_parameters": 14966784,
+    "total_parameters": 1713639424,
+    "trainable_percent": 0.8733916709890074,
+    "train_metrics": {
+      "train_runtime": 259.81,
+      "train_samples_per_second": 2.887,
+      "train_steps_per_second": 0.185,
+      "total_flos": 3789750939402240.0,
+      "train_loss": 0.05255902212775254,
+      "epoch": 3.0
+    },
+    "evaluation_metrics": {
+      "eval_loss": 0.006475603673607111,
+      "eval_runtime": 9.1856,
+      "eval_samples_per_second": 10.887,
+      "eval_steps_per_second": 10.887,
+      "epoch": 3.0
+    },
+    "adapter_weights_sha256": "e930d284cc29e47e88976d16699d00c5883b0a811d29a08ef85763c0e5b98fe9",
+    "training_attempt": "artifacts/results/e07_training/e07_qlora_rank8/20260827T171924Z-training-attempt.json",
+    "telemetry": "artifacts/results/e07_training/e07_qlora_rank8/20260827T171924Z-telemetry.csv",
+    "telemetry_summary": {
+      "sample_count": 268,
+      "error_samples": 0,
+      "peak_memory_used_mib": 5402.0,
+      "mean_gpu_utilization_percent": 66.44776119402985,
+      "max_temperature_c": 60.0,
+      "mean_power_draw_w": 174.092276119403,
+      "mean_sm_clock_mhz": 2879.466417910448
+    },
+    "log_history": [
+      {
+        "loss": 0.4409355640411377,
+        "grad_norm": 0.7622259259223938,
+        "learning_rate": 0.00019975640502598244,
+        "epoch": 0.32,
+        "step": 5
+      },
+      {
+        "loss": 0.05175069570541382,
+        "grad_norm": 0.34060266613960266,
+        "learning_rate": 0.0001913545457642601,
+        "epoch": 0.64,
+        "step": 10
+      },
+      {
+        "loss": 0.005404796451330185,
+        "grad_norm": 0.07544616609811783,
+        "learning_rate": 0.0001719339800338651,
+        "epoch": 0.96,
+        "step": 15
+      },
+      {
+        "eval_loss": 0.014191484078764915,
+        "eval_runtime": 9.5738,
+        "eval_samples_per_second": 10.445,
+        "eval_steps_per_second": 10.445,
+        "epoch": 1.0,
+        "step": 16
+      },
+      {
+        "loss": 0.0010126451030373572,
+        "grad_norm": 0.03159337118268013,
+        "learning_rate": 0.00014383711467890774,
+        "epoch": 1.256,
+        "step": 20
+      },
+      {
+        "loss": 0.0038700409233570097,
+        "grad_norm": 0.013918778859078884,
+        "learning_rate": 0.00011045284632676536,
+        "epoch": 1.576,
+        "step": 25
+      },
+      {
+        "loss": 0.0006908785551786422,
+        "grad_norm": 0.0025842187460511923,
+        "learning_rate": 7.580781044003324e-05,
+        "epoch": 1.896,
+        "step": 30
+      },
+      {
+        "eval_loss": 0.0074051618576049805,
+        "eval_runtime": 9.1383,
+        "eval_samples_per_second": 10.943,
+        "eval_steps_per_second": 10.943,
+        "epoch": 2.0,
+        "step": 32
+      },
+      {
+        "loss": 0.00010684432927519084,
+        "grad_norm": 0.007820319384336472,
+        "learning_rate": 4.4080709652925336e-05,
+        "epoch": 2.192,
+        "step": 35
+      },
+      {
+        "loss": 0.0006189014296978712,
+        "grad_norm": 0.7300823926925659,
+        "learning_rate": 1.9098300562505266e-05,
+        "epoch": 2.512,
+        "step": 40
+      },
+      {
+        "loss": 8.964124135673046e-05,
+        "grad_norm": 0.0017957213567569852,
+        "learning_rate": 3.873830406168111e-06,
+        "epoch": 2.832,
+        "step": 45
+      },
+      {
+        "eval_loss": 0.006475603673607111,
+        "eval_runtime": 7.5456,
+        "eval_samples_per_second": 13.253,
+        "eval_steps_per_second": 13.253,
+        "epoch": 3.0,
+        "step": 48
+      },
+      {
+        "train_runtime": 259.81,
+        "train_samples_per_second": 2.887,
+        "train_steps_per_second": 0.185,
+        "total_flos": 3789750939402240.0,
+        "train_loss": 0.05255902212775254,
+        "epoch": 3.0,
+        "step": 48
+      },
+      {
+        "eval_loss": 0.006475603673607111,
+        "eval_runtime": 9.1856,
+        "eval_samples_per_second": 10.887,
+        "eval_steps_per_second": 10.887,
+        "epoch": 3.0,
+        "step": 48
+      }
+    ],
+    "versions": {
+      "torch": "2.11.0+cu130",
+      "transformers": "5.14.1",
+      "accelerate": "1.12.0",
+      "bitsandbytes": "0.49.1",
+      "peft": "0.18.1"
+    },
+    "environment": {
+      "schema_version": 1,
+      "collected_at_utc": "2026-08-27T17:24:16.450322+00:00",
+      "project_root": "/home/user/projects/QwenServe-12G",
+      "platform": {
+        "system": "Linux",
+        "release": "6.18.33.1-microsoft-standard-WSL2",
+        "version": "#1 SMP PREEMPT_DYNAMIC Fri Jun  5 01:12:21 UTC 2026",
+        "machine": "x86_64",
+        "wsl": true
+      },
+      "python": {
+        "version": "3.12.3 (main, Jun 19 2026, 12:46:00) [GCC 13.3.0]",
+        "executable": "/home/user/projects/QwenServe-12G/.venv/bin/python3"
+      },
+      "executables": {
+        "uv": "/home/user/.local/bin/uv",
+        "vllm": "/home/user/projects/QwenServe-12G/.venv/bin/vllm",
+        "nvidia-smi": "/usr/lib/wsl/lib/nvidia-smi",
+        "git": "/usr/bin/git"
+      },
+      "vllm": {
+        "ok": true,
+        "returncode": 0,
+        "stdout": "0.25.1",
+        "stderr": ""
+      },
+      "vllm_bench": {
+        "ok": true,
+        "detail": "benchmark CLI imports successfully"
+      },
+      "nvidia_smi": {
+        "ok": true,
+        "returncode": 0,
+        "stdout": "NVIDIA GeForce RTX 5070, 581.29, 12227, 58, 250.00",
+        "stderr": "",
+        "gpus": [
+          {
+            "name": "NVIDIA GeForce RTX 5070",
+            "driver_version": "581.29",
+            "memory_total_mib": 12227.0,
+            "temperature_c": 58.0,
+            "power_limit_w": 250.0
+          }
+        ]
+      },
+      "torch": {
+        "installed": true,
+        "version": "2.11.0+cu130",
+        "cuda_version": "13.0",
+        "cuda_available": true,
+        "device_count": 1,
+        "device_name": "NVIDIA GeForce RTX 5070",
+        "device_capability": [
+          12,
+          0
+        ]
+      },
+      "git": {
+        "available": true,
+        "commit": "2101c4aba43f62aa6fa047570fb57774c4d03685",
+        "dirty": true,
+        "status": "M reports/e07_lora/readiness.json\n M reports/e07_lora/readiness.md\n?? artifacts/archive/\n?? artifacts/failed/\n?? reports/e07_lora/smoke/\n?? reports/pilot/"
+      },
+      "runtime": {
+        "cwd": "/home/user/projects/QwenServe-12G",
+        "pid": 977
+      }
+    },
+    "git": {
+      "commit": "2101c4aba43f62aa6fa047570fb57774c4d03685",
+      "branch": "codex/e07-lora",
+      "dirty": true
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "kind": "e07_quality_comparison",
+  "created_at": "2026-08-28T00:29:26.100068+00:00",
+  "base_result": "artifacts/results/e07_quality/base/20260827T173917Z-e07-quality-base.json",
+  "lora_result": "artifacts/results/e07_quality/lora/20260827T182729Z-e07-quality-lora.json",
+  "lora_manifest_sha256": "bf966967b8aa09eb072917f78a056026b4e190fb5e8b42cb7fe2809db755ae86",
+  "lora_weights_sha256": "e930d284cc29e47e88976d16699d00c5883b0a811d29a08ef85763c0e5b98fe9",
+  "dataset_sha256_match": true,
+  "cases": 50,
+  "prompt_matches": 50,
+  "base": {
+    "schema_pass_rate": 0.92,
+    "root_cause_macro_f1": 0.719083139083139,
+    "action_micro_f1": 0.5208333333333334,
+    "dangerous_command_rate": 0.0
+  },
+  "lora": {
+    "schema_pass_rate": 1.0,
+    "root_cause_macro_f1": 0.9366161616161616,
+    "action_micro_f1": 0.94,
+    "dangerous_command_rate": 0.0
+  },
+  "absolute_quality_status": "PASS",
+  "quality_improvement_status": "PASS",
+  "automated_status": "PASS",
+  "human_review_status": "PASS",
+  "overall_status": "PASS",
+  "human_review_csv": "reports/e07_lora/human_review.csv",
+  "human_review_key": "reports/e07_lora/human_review_key.json",
+  "human_review": {
+    "schema_version": 1,
+    "kind": "e07_human_review_summary",
+    "created_at": "2026-08-28T00:29:26.157637+00:00",
+    "cases": 50,
+    "base_mean_score": 3.58,
+    "lora_mean_score": 4.76,
+    "lora_minus_base": 1.1799999999999997,
+    "preferences": {
+      "base": 2,
+      "lora": 38,
+      "tie": 10
+    },
+    "status": "PASS"
+  },
+  "finalized_at": "2026-08-28T00:29:26.157637+00:00"
+}

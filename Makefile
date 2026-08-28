@@ -370,10 +370,10 @@ summarize-e07-human-review:
 finalize-e07:
 	$(QSL) inspect-e07-adapter --adapter-dir artifacts/adapters/e07/rank8 --expected-rank 8
 	$(QSL) summarize --manifest-dir artifacts/env --output-dir reports/e07_lora --profile-prefix e07_
-	$(QSL) compare-e07
-	$(QSL) compare-e07-quality
-	$(QSL) summarize-e07-human-review
-	$(QSL) finalize-e07
+	$(QSL) compare-e07; status=$$?; test $$status -eq 0 -o $$status -eq 2
+	$(QSL) compare-e07-quality; status=$$?; test $$status -eq 0 -o $$status -eq 2
+	$(QSL) summarize-e07-human-review; status=$$?; test $$status -eq 0 -o $$status -eq 2
+	$(QSL) finalize-e07; status=$$?; test $$status -eq 0 -o $$status -eq 2
 
 test:
 	PYTHONPATH=src $(PYTHON) -m unittest discover -s tests -v

@@ -33,16 +33,17 @@ E03 的长度 x 并发问题由 E01 的完整 3x4 矩阵覆盖，不重复计数
 E04 保留随机-token严格输出门槛的限制，E05 保留 FP8 质量回归失败，
 这些负面结果均没有被重新定义为成功优化。
 
-**E07 QLoRA/LoRA serving 的协议、数据、训练脚本、Adapter 校验、固定质量
-评测和 36-run 在线成本矩阵已经准备完成，状态为 `READY_FOR_GPU`。** GPU
-训练和推理结果尚未执行，当前不能宣称 E07 质量收益或在线开销结论。E08
-token-aware 准入控制仍属于后续里程碑。
+**E07 QLoRA/LoRA serving 实验已完整执行，机器总体门槛为 `FAIL`。** smoke、
+rank-8、rank-16 训练和 Adapter 检查通过，36 次正式性能运行全部有效且错误率为
+0；自动质量与用户委托的 Agent 代理盲评门槛通过，但 6 个在线成本 cell 中有
+4 个因相对 TTFT 增幅超过冻结上限而失败。该结果记录为质量收益与在线成本之间的
+tradeoff，不推荐当前动态 LoRA 配置作为默认部署。E08 token-aware 准入控制仍
+属于后续里程碑。
 
-E07 的无 GPU 准备检查：
+使用 WSL 中保留的原始 artifacts 可重建 E07 最终报告：
 
 ```bash
-make prepare-e07-data
-make audit-e07-readiness
+make finalize-e07
 ```
 
 在新的 Codex Agent 中继续项目时，先阅读
@@ -58,6 +59,7 @@ make audit-e07-readiness
 | E04 APC | 36 runs | 约 46% actual hit 时 TTFT -24.20%；79% hit/C8 时 TTFT -55.11% 且 SLO 恢复 |
 | E05 FP8 KV | 36 runs | KV 容量 2.009x，但 schema 92%->70%、匿名人工均分 3.680->3.120，不推荐默认部署 |
 | E06 组合 | 48 runs | 叠加收益在 reuse50-P1024/C4 和 reuse90-P1792/C8 成立，24/24 canary 一致 |
+| E07 QLoRA/LoRA | 36 runs | 自动质量和代理盲评 PASS，但 4/6 在线成本 cell 因 TTFT 回归 FAIL，不推荐当前动态 LoRA 默认部署 |
 
 完整数据解读、部署建议、故障诊断和有效性边界见
 [E01-E06 最终技术报告](docs/E01_E06_FINAL_REPORT.md)。
@@ -189,8 +191,8 @@ E07 的研究问题、冻结质量/成本门槛见
 [E07 实验协议](docs/E07_PROTOCOL.md)，训练数据来源和局限见
 [E07 数据卡](docs/E07_DATA_CARD.md)，WSL2 手工执行命令见
 [E07 QLoRA 与 LoRA Serving 运行手册](docs/M3_E07_QLORA_LORA_RUNBOOK.md)。
-[E07 结果模板](docs/E07_RESULTS_TEMPLATE.md) 只定义待填报告结构，不代表 GPU
-实验已经完成。
+完整训练、质量、在线成本和部署结论见 [E07 实验结果](docs/E07_RESULTS.md)。
+[E07 结果模板](docs/E07_RESULTS_TEMPLATE.md) 保留为报告结构参考。
 
 详细边界和验收标准见 [项目章程](docs/PROJECT_CHARTER.md)、[可行性分析](docs/FEASIBILITY.md) 与 [实验协议](docs/EXPERIMENT_PROTOCOL.md)。
 

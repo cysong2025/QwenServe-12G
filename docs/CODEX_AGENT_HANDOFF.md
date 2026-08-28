@@ -24,19 +24,20 @@ The main question is:
 
 - GitHub repository: `git@github.com:cysong2025/QwenServe-12G.git`
 - Active branch: `codex/e07-lora`
-- Last prepared commit: `e4ad048 Prepare reproducible E07 QLoRA and LoRA experiments`
 - Mac workspace: `/Users/songchuangye/Documents/推理训练`
 - WSL2 workspace: `~/projects/QwenServe-12G`
 - E01-E06: complete; 228 formal benchmark runs; structured audit `PASS`.
-- E07: code, protocol, generated data, tests, and runbook are ready; status is
-  `READY_FOR_GPU`; GPU training and serving results have not been run.
+- E07: execution complete; 36 formal benchmark runs are `VALID`, automated and
+  delegated-Agent blind quality gates pass, but four of six online-cost cells
+  fail the frozen TTFT overhead limit. Final machine status is `FAIL`.
 - E08 token-aware admission control: future milestone, not started.
 - CPU/static verification at handoff: 70 tests passed.
-- Planned E07 online matrix: 36 formal runs, comprising Base and rank-8 LoRA,
-  six workload/concurrency cells each, three repetitions per cell.
+- Completed E07 online matrix: 36 formal runs, comprising Base and rank-8 LoRA,
+  six workload/concurrency cells each, three repetitions per cell; error rate 0.
 
-Do not describe E07 as complete and do not claim LoRA quality gains or online
-cost until `reports/e07_lora/final.md` has been generated from GPU evidence.
+E07 execution is complete, but do not relabel its overall `FAIL` as successful
+deployment. The measured quality gain coexists with unacceptable online TTFT
+overhead in four frozen cells.
 
 One user-owned untracked file existed at handoff:
 
@@ -56,7 +57,7 @@ that action.
 | E04 | Automatic Prefix Caching | APC improves TTFT when real prefix reuse is present; retain the documented random-token correctness limitation. |
 | E05 | FP8 KV cache | KV capacity is about 2.009x, but schema quality fell from 92% to 70% and blind-review score from 3.680 to 3.120; FP8 is not the default recommendation. |
 | E06 | Combined optimization | Benefits are workload-dependent; frozen correctness canary passed 24/24. |
-| E07 | QLoRA and LoRA serving | Preparation only; no measured result yet. |
+| E07 | QLoRA and LoRA serving | Adapter/automated quality/delegated-Agent blind quality PASS; online cost FAIL in short C1/C4/C8 and medium C1, so current dynamic LoRA is not the default deployment. |
 
 Important truth boundaries:
 
@@ -67,12 +68,17 @@ Important truth boundaries:
 - `make compare-*` may exit with code 2 when an experiment fails its scientific
   gate. This does not by itself mean the comparison code is broken.
 - Preserve E04 and E05 limitations in reports, resumes, and interview answers.
+- Preserve the E07 reviewer limitation: the user delegated the 50-pair blind
+  scoring to Codex Agent. A/B mapping remained hidden until all scores were
+  locked, but this is not an independent-human preference study.
 
 Primary completed references:
 
 - `docs/E01_E06_FINAL_REPORT.md`
 - `docs/INTERVIEW_GUIDE_E01_E06.md`
 - `reports/final/e01_e06_audit.md`
+- `docs/E07_RESULTS.md`
+- `reports/e07_lora/final.md`
 
 ## 4. Target environment
 
@@ -375,10 +381,12 @@ Expected compact report outputs include:
 - `reports/e07_lora/comparison.csv` and `comparison.md`
 - `reports/e07_lora/quality.json` and `quality.md`
 - `reports/e07_lora/human_review.csv`
+- `reports/e07_lora/human_review_key.json`
 - `reports/e07_lora/human_review_summary.json` and `.md`
 - `reports/e07_lora/final.json` and `final.md`
 
-E07 is complete only when:
+E07 completion criteria, satisfied by the preserved WSL evidence and compact
+reports:
 
 1. Smoke, rank-8, and rank-16 training evidence is preserved.
 2. The primary rank-8 Adapter passes structural/hash inspection.
@@ -397,7 +405,8 @@ and manifests listed by the E07 runbook.
 - `docs/E07_PROTOCOL.md`: research question, frozen protocol, and gates.
 - `docs/E07_DATA_CARD.md`: generated training/validation/test data provenance.
 - `docs/M3_E07_QLORA_LORA_RUNBOOK.md`: authoritative manual GPU sequence.
-- `docs/E07_RESULTS_TEMPLATE.md`: report shape only, not measured evidence.
+- `docs/E07_RESULTS.md`: measured result, deployment decision, and limitations.
+- `docs/E07_RESULTS_TEMPLATE.md`: retained report-shape reference.
 - `reports/e07_lora/readiness.md`: pre-GPU audit status.
 - `configs/train/e07_*.toml`: smoke, rank-8, and rank-16 training configs.
 - `configs/serve/e07_base.toml`: Base serving profile.
@@ -417,9 +426,9 @@ The user can start the next Codex task with:
 
 ```text
 继续 QwenServe-12G 项目。请先阅读 docs/CODEX_AGENT_HANDOFF.md，检查当前
-git status、分支和最新提交，再阅读 E07 runbook/readiness。E01-E06 已完成，
-当前目标是协助我在 Windows/WSL2 手工完成 E07 GPU 实验；Mac 端负责代码、
-测试、报告和 Git 提交。请直接按步骤给可复制命令，分析我粘贴的输出，保持
-冻结实验门槛，不要触碰 reports/e05_kv_cache/human_review.backup.csv，也不要
-把尚未运行的 E07 描述为已完成。
+git status、分支和最新提交，再阅读 docs/E07_RESULTS.md 与 E07 final reports。
+E01-E07 已完成；E07 的质量门槛通过但在线成本总体 FAIL，代理盲评不是独立人类
+研究。当前后续里程碑是尚未启动的 E08 token-aware 准入控制。保持既有冻结实验
+门槛，不要触碰 reports/e05_kv_cache/human_review.backup.csv，也不要把 E07
+负结果改写成成功部署。
 ```
