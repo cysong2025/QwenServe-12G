@@ -1,6 +1,6 @@
 # Codex Agent Handoff
 
-Last updated: 2026-08-29
+Last updated: 2026-08-30
 
 This document is the handoff entry point for continuing QwenServe-12G in a new
 Codex task. Read it before changing code or asking the user to run GPU work.
@@ -23,9 +23,10 @@ The main question is:
 ## 2. Current handoff state
 
 - GitHub repository: `git@github.com:cysong2025/QwenServe-12G.git`
-- Active branch: `codex/e08-admission`
+- Active branch: `codex/e09-deadline-admission`
 - Mac workspace: `/Users/songchuangye/Documents/推理训练`
 - WSL2 E08 workspace: `~/projects/QwenServe-12G-e08`
+- Planned WSL2 E09 workspace: `~/projects/QwenServe-12G-e09`
 - E01-E06: complete; 228 formal benchmark runs; structured audit `PASS`.
 - E07: execution complete; 36 formal benchmark runs are `VALID`, automated and
   delegated-Agent blind quality gates pass, but four of six online-cost cells
@@ -33,7 +34,10 @@ The main question is:
 - E08: execution complete; 3 pilot and 27 formal runs are `VALID`, exact-trace
   pairing and fairness pass, but both overload goodput gates fail and one
   token-aware repetition exceeds the frozen TPOT SLO. Final status is `FAIL`.
-- CPU/static verification at handoff: 81 tests passed.
+- E09 revision A: code, tests, independent holdout traces, protocol, and GPU
+  runbook are ready on Mac; readiness is `READY_FOR_GPU`, GPU execution is
+  `DEFERRED`, and scientific result is `NOT_RUN`.
+- CPU/static verification at handoff: 91 tests passed.
 - Completed E07 online matrix: 36 formal runs, comprising Base and rank-8 LoRA,
   six workload/concurrency cells each, three repetitions per cell; error rate 0.
 
@@ -45,6 +49,10 @@ E08 execution is also complete, but the tested token-aware policy is not a
 successful default. Burst/steady-overload median goodput gains versus the best
 baseline are -10.74%/-15.34%, and steady-overload repetition 2 has 63.37 ms
 P95 TPOT versus the frozen 50 ms limit.
+
+The overall project objective remains incomplete because E08 produced no
+positive admission benefit. E09 is an independent deadline-aware admission
+experiment; do not describe readiness or unexecuted holdouts as a result.
 
 One user-owned untracked file existed at handoff:
 
@@ -66,6 +74,7 @@ that action.
 | E06 | Combined optimization | Benefits are workload-dependent; frozen correctness canary passed 24/24. |
 | E07 | QLoRA and LoRA serving | Adapter/automated quality/delegated-Agent blind quality PASS; online cost FAIL in short C1/C4/C8 and medium C1, so current dynamic LoRA is not the default deployment. |
 | E08 | Token-aware admission | 27/27 formal cells are valid and paired; fairness PASS, but both overload goodput gates and one per-repetition TPOT SLO fail, so the current policy is not the default deployment. |
+| E09 | Deadline-aware admission | Revision A is ready for calibration and GPU holdouts; 27 formal cells are planned, but none has run and the scientific result is `NOT_RUN`. |
 
 Important truth boundaries:
 
@@ -355,6 +364,14 @@ listed by the E08 runbook.
 - `src/qwen_serve_lab/e08*.py`: admission, runner, comparison, and readiness.
 - `reports/e08_admission/comparison.md` and `final.json`: completed E08 result.
 - `reports/e08_admission/readiness.md`: retained pre-GPU audit, not the result.
+- `docs/E09_PROTOCOL.md`: independent holdout question, calibration boundary,
+  frozen queue controller, and positive-result gates.
+- `docs/M4_E09_DEADLINE_ADMISSION_RUNBOOK.md`: authoritative E09 GPU sequence.
+- `configs/admission/e09.toml`: disjoint seeds, burst holdouts, C8/8192-token/
+  800-ms deadline controller, and gates.
+- `src/qwen_serve_lab/e09*.py`: trace, runner, comparison, and readiness logic.
+- `reports/e09_deadline_admission/readiness.md`: pre-GPU audit only; it is not a
+  scientific result.
 - `Makefile`: operator-facing entry points.
 
 Before editing, inspect `git status`, the latest commit, relevant tests, and the
@@ -368,8 +385,9 @@ The user can start the next Codex task with:
 ```text
 继续 QwenServe-12G 项目。请先阅读 docs/CODEX_AGENT_HANDOFF.md，检查当前
 git status、分支和最新提交。E01-E08 已执行完成；E07 在线成本总体 FAIL，E08
-证据完整但冻结科学门槛总体 FAIL。E08 原始 artifacts 保留在 WSL2 的
-~/projects/QwenServe-12G-e08，Git 只提交紧凑报告。不要触碰
-reports/e05_kv_cache/human_review.backup.csv，也不要把 E07/E08 的负面结果
-描述为成功部署。
+冻结科学门槛总体 FAIL，因此项目目标仍未完成。E09 revision A 已在 Mac 完成
+代码和 readiness，但 GPU 结果是 NOT_RUN；下一步按 E09 runbook 在 WSL2 先跑
+calibration，再冻结执行 27 个正式 holdout cells。不要触碰
+reports/e05_kv_cache/human_review.backup.csv，也不要把 readiness 或负结果描述为
+成功部署。
 ```

@@ -51,6 +51,10 @@ from qwen_serve_lab.e08 import write_e08_comparison
 from qwen_serve_lab.e08_admission import POLICIES as E08_POLICIES, prepare_e08_traces
 from qwen_serve_lab.e08_readiness import write_e08_readiness_report
 from qwen_serve_lab.e08_runner import run_e08_cell, run_e08_matrix
+from qwen_serve_lab.e09 import write_e09_comparison
+from qwen_serve_lab.e09_admission import POLICIES as E09_POLICIES, prepare_e09_traces
+from qwen_serve_lab.e09_readiness import write_e09_readiness_report
+from qwen_serve_lab.e09_runner import run_e09_cell, run_e09_matrix
 from qwen_serve_lab.final_audit import write_e01_e06_audit
 from qwen_serve_lab.config import (
     BenchmarkConfig,
@@ -501,6 +505,64 @@ def _parser() -> argparse.ArgumentParser:
     )
     readiness_e08_parser.add_argument(
         "--output-dir", type=Path, default=Path("reports/e08_admission")
+    )
+    prepare_e09_parser = subparsers.add_parser(
+        "prepare-e09-traces", help="Generate deterministic frozen E09 holdout traces"
+    )
+    prepare_e09_parser.add_argument(
+        "--config", type=Path, default=Path("configs/admission/e09.toml")
+    )
+    prepare_e09_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("artifacts/results/e09_deadline_admission/traces"),
+    )
+    run_e09_parser = subparsers.add_parser(
+        "run-e09", help="Run one exact E09 profile/policy/repetition cell"
+    )
+    run_e09_parser.add_argument(
+        "--config", type=Path, default=Path("configs/admission/e09.toml")
+    )
+    run_e09_parser.add_argument("--profile", required=True)
+    run_e09_parser.add_argument(
+        "--policy", choices=E09_POLICIES, required=True
+    )
+    run_e09_parser.add_argument("--repetition", type=int, required=True)
+    run_e09_parser.add_argument("--tokenizer-path", type=Path, required=True)
+    run_e09_matrix_parser = subparsers.add_parser(
+        "run-e09-matrix", help="Run the balanced-order E09 formal holdout matrix"
+    )
+    run_e09_matrix_parser.add_argument(
+        "--config", type=Path, default=Path("configs/admission/e09.toml")
+    )
+    run_e09_matrix_parser.add_argument("--tokenizer-path", type=Path, required=True)
+    run_e09_matrix_parser.add_argument(
+        "--profile", action="append", default=[], help="Limit to one formal profile"
+    )
+    run_e09_matrix_parser.add_argument("--skip-completed", action="store_true")
+    compare_e09_parser = subparsers.add_parser(
+        "compare-e09", help="Compare all formal E09 deadline-admission runs"
+    )
+    compare_e09_parser.add_argument(
+        "--config", type=Path, default=Path("configs/admission/e09.toml")
+    )
+    compare_e09_parser.add_argument(
+        "--result-root",
+        type=Path,
+        default=Path("artifacts/results/e09_deadline_admission/runs"),
+    )
+    compare_e09_parser.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e09_deadline_admission")
+    )
+    readiness_e09_parser = subparsers.add_parser(
+        "audit-e09-readiness", help="Audit E09 code and protocol without a GPU"
+    )
+    readiness_e09_parser.add_argument("--root", type=Path, default=Path("."))
+    readiness_e09_parser.add_argument(
+        "--config", type=Path, default=Path("configs/admission/e09.toml")
+    )
+    readiness_e09_parser.add_argument(
+        "--output-dir", type=Path, default=Path("reports/e09_deadline_admission")
     )
     return parser
 
@@ -1294,6 +1356,45 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if paths[-1] else 2
         if args.command == "audit-e08-readiness":
             json_path, markdown_path, passed = write_e08_readiness_report(
+                args.root, args.config, args.output_dir
+            )
+            print(json_path)
+            print(markdown_path)
+            return 0 if passed else 2
+        if args.command == "prepare-e09-traces":
+            paths = prepare_e09_traces(args.config, args.output_dir)
+            for path in paths:
+                print(path)
+            return 0
+        if args.command == "run-e09":
+            output_path, valid = run_e09_cell(
+                config_path=args.config,
+                profile_name=args.profile,
+                policy=args.policy,
+                repetition=args.repetition,
+                tokenizer_path=args.tokenizer_path,
+            )
+            print(output_path)
+            return 0 if valid else 2
+        if args.command == "run-e09-matrix":
+            _, valid = run_e09_matrix(
+                config_path=args.config,
+                tokenizer_path=args.tokenizer_path,
+                profiles=args.profile,
+                skip_completed=args.skip_completed,
+            )
+            return 0 if valid else 2
+        if args.command == "compare-e09":
+            paths = write_e09_comparison(
+                result_root=args.result_root,
+                config_path=args.config,
+                output_dir=args.output_dir,
+            )
+            for path in paths[:-1]:
+                print(path)
+            return 0 if paths[-1] else 2
+        if args.command == "audit-e09-readiness":
+            json_path, markdown_path, passed = write_e09_readiness_report(
                 args.root, args.config, args.output_dir
             )
             print(json_path)

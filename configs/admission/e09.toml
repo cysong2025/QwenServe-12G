@@ -1,0 +1,91 @@
+[experiment]
+name = "e09_deadline_admission"
+description = "Frozen holdout comparison of deadline-aware external admission on the E06 BF16 Base server"
+server_config = "configs/serve/e06_bt2048_apc_off.toml"
+base_url = "http://127.0.0.1:8000"
+served_model_name = "qwen2.5-3b-instruct"
+policies = ["unbounded", "fixed_concurrency", "deadline_aware"]
+repetitions = 3
+seeds = [20270117, 20270217, 20270317]
+calibration_seed = 20261217
+warmup_requests = 10
+request_timeout_seconds = 120.0
+drain_timeout_seconds = 180.0
+client_max_workers = 64
+maximum_arrival_lag_ms = 100.0
+cooldown_seconds = 30.0
+slo_ttft_ms = 1000.0
+slo_tpot_ms = 50.0
+
+[fixed_concurrency]
+max_inflight = 4
+
+[deadline_aware]
+max_inflight = 8
+max_inflight_tokens = 8192
+max_queue_wait_ms = 800.0
+poll_interval_ms = 5.0
+
+[workloads.short]
+input_tokens = 128
+output_tokens = 128
+weight = 5
+
+[workloads.medium]
+input_tokens = 512
+output_tokens = 256
+weight = 3
+
+[workloads.long]
+input_tokens = 2048
+output_tokens = 256
+weight = 2
+
+[[profiles]]
+name = "calibration_burst"
+formal = false
+mode = "burst"
+duration_seconds = 60.0
+rate_rps = 2.0
+burst_period_seconds = 10.0
+burst_duration_seconds = 2.0
+burst_rate_rps = 6.0
+background_rate_rps = 1.0
+
+[[profiles]]
+name = "holdout_nominal"
+formal = true
+mode = "steady"
+duration_seconds = 180.0
+rate_rps = 1.0
+
+[[profiles]]
+name = "holdout_periodic_burst"
+formal = true
+mode = "burst"
+duration_seconds = 180.0
+rate_rps = 2.0
+burst_period_seconds = 10.0
+burst_duration_seconds = 2.0
+burst_rate_rps = 6.0
+background_rate_rps = 1.0
+
+[[profiles]]
+name = "holdout_shock_burst"
+formal = true
+mode = "burst"
+duration_seconds = 180.0
+rate_rps = 2.0
+burst_period_seconds = 10.0
+burst_duration_seconds = 1.0
+burst_rate_rps = 11.0
+background_rate_rps = 1.0
+
+[gates]
+gated_profiles = ["holdout_periodic_burst", "holdout_shock_burst"]
+minimum_goodput_gain_percent_vs_best_baseline = 10.0
+minimum_offered_headroom_percent = 15.0
+minimum_fairness_jain = 0.80
+maximum_fairness_regression_vs_fixed = 0.05
+maximum_admitted_error_rate = 0.01
+historical_calibration_best_goodput_rps = 1.50

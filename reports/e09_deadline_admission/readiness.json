@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "kind": "e09_readiness_report",
+  "created_at": "2026-08-30T04:43:19.720815+00:00",
+  "status": "READY_FOR_GPU",
+  "gpu_execution": "DEFERRED",
+  "scientific_result": "NOT_RUN",
+  "planned_formal_runs": 27,
+  "historical_headroom_percent": {
+    "holdout_periodic_burst": 38.14814814814816,
+    "holdout_shock_burst": 39.62962962962963
+  },
+  "checks": [
+    {
+      "name": "server-control",
+      "passed": true,
+      "detail": "E06 Base, BF16 KV, batch-token 2048, APC-off server is hash-bound"
+    },
+    {
+      "name": "independent-holdout",
+      "passed": true,
+      "detail": "calibration seed is disjoint from three predeclared formal holdout seeds"
+    },
+    {
+      "name": "formal-open-arrival-profiles",
+      "passed": true,
+      "detail": "nominal diagnostic plus periodic and shock burst holdouts; 27 formal runs"
+    },
+    {
+      "name": "deterministic-traces",
+      "passed": true,
+      "detail": "nine formal traces reproduce authenticated hashes"
+    },
+    {
+      "name": "frozen-workload-mix",
+      "passed": true,
+      "detail": "128/128, 512/256, and 2048/256 shapes use exact 50/30/20 cycles"
+    },
+    {
+      "name": "offered-headroom",
+      "passed": true,
+      "detail": "holdout offered ceilings retain at least 15% headroom over the frozen E08 burst reference"
+    },
+    {
+      "name": "policy-controls",
+      "passed": true,
+      "detail": "unbounded, fixed-C4, and deadline C8/token ceilings are independently accounted"
+    },
+    {
+      "name": "deadline-accounting",
+      "passed": true,
+      "detail": "arrival-to-first-token latency includes the frozen external queue wait"
+    },
+    {
+      "name": "frozen-scientific-gates",
+      "passed": true,
+      "detail": "gated bursts require headroom, best-baseline gain, absolute SLO, and fairness"
+    },
+    {
+      "name": "request-level-evidence",
+      "passed": true,
+      "detail": "decisions, queue waits, TTFT/TPOT, class yield, telemetry, and hashes are retained"
+    },
+    {
+      "name": "runbook",
+      "passed": true,
+      "detail": "two-terminal GPU runbook exists"
+    }
+  ]
+}
