@@ -26,7 +26,7 @@ cd ~/projects
 git clone --branch codex/e09-deadline-admission \
   git@github.com:cysong2025/QwenServe-12G.git QwenServe-12G-e09
 cd ~/projects/QwenServe-12G-e09
-ln -s ../QwenServe-12G-e08/.venv .venv
+ln -s ../QwenServe-12G/.venv .venv
 source .venv/bin/activate
 git status --short --branch
 git rev-parse HEAD
