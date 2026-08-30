@@ -13,7 +13,7 @@
 - 可复现的 vLLM 基线和实验配置；
 - TTFT、TPOT、E2E、吞吐、goodput、显存与质量对照数据；
 - QLoRA 训练、离线评测和 LoRA 在线服务闭环；
-- 一个 token-aware、SLO 感知的请求准入模块；
+- 一个 deadline-aware、SLO 感知的请求准入模块；
 - 有适用边界、置信证据和原始数据支持的结论。
 
 ## 当前状态
@@ -46,6 +46,13 @@ tradeoff，不推荐当前动态 LoRA 配置作为默认部署。
 -15.34%，且 overload/r2 的 P95 TPOT 为 63.37 ms，超过冻结的 50 ms 上限。因此
 实验执行完成，但当前 token-aware 策略不是成功优化，也不推荐作为默认部署。
 
+**E09 deadline-aware 准入控制实验已完整执行，冻结机器门槛为 `PASS`。** 27 个
+正式 holdout cells 全部有效并精确配对。periodic/shock burst 的中位 SLO
+goodput 相对最佳基线分别提升 **18.75%/17.43%**；deadline-aware 的 P95
+TTFT/TPOT、公平性、错误率和实际 offered-headroom 门槛全部通过。nominal 诊断
+流量下收益为 0%，因此部署结论限定为冻结的突发开放到达负载，不泛化到 steady
+overload 或其他硬件、模型和 workload mix。
+
 E08 的 WSL2 执行顺序见
 [M4/E08 准入控制实验手册](docs/M4_E08_ADMISSION_RUNBOOK.md)，完整结果解读见
 [E08 准入控制实验结果](docs/E08_RESULTS.md)。使用 WSL 中保留的原始 artifacts
@@ -53,6 +60,16 @@ E08 的 WSL2 执行顺序见
 
 ```bash
 make compare-e08; status=$?; test "$status" -eq 0 -o "$status" -eq 2
+```
+
+E09 的协议、执行顺序和正向结果见
+[E09 协议](docs/E09_PROTOCOL.md)、
+[M4/E09 Deadline-aware 运行手册](docs/M4_E09_DEADLINE_ADMISSION_RUNBOOK.md) 和
+[E09 结果](docs/E09_RESULTS.md)。使用 WSL 中保留的原始 artifacts 可重建最终
+`PASS` 报告：
+
+```bash
+make compare-e09
 ```
 
 使用 WSL 中保留的原始 artifacts 可重建 E07 最终报告：
@@ -76,11 +93,13 @@ make finalize-e07
 | E06 组合 | 48 runs | 叠加收益在 reuse50-P1024/C4 和 reuse90-P1792/C8 成立，24/24 canary 一致 |
 | E07 QLoRA/LoRA | 36 runs | 自动质量和代理盲评 PASS，但 4/6 在线成本 cell 因 TTFT 回归 FAIL，不推荐当前动态 LoRA 默认部署 |
 | E08 准入控制 | 27 runs | 证据完整且公平性 PASS，但 burst/overload goodput 增益为 -10.74%/-15.34%，overload/r2 TPOT 越线，总体 FAIL |
+| E09 Deadline-aware 准入 | 27 runs | periodic/shock burst goodput 相对最佳基线 +18.75%/+17.43%，绝对 SLO 与公平性均 PASS |
 
 完整数据解读、部署建议、故障诊断和有效性边界见
 [E01-E06 最终技术报告](docs/E01_E06_FINAL_REPORT.md)。
 E07/E08 的后续负面结果见 [E07 结果](docs/E07_RESULTS.md) 和
-[E08 结果](docs/E08_RESULTS.md)。
+[E08 结果](docs/E08_RESULTS.md)，E09 的独立正向 holdout 结果见
+[E09 结果](docs/E09_RESULTS.md)。
 简历表述、面试深挖点和禁止过度宣称的边界见
 [E01-E06 面试讲述指南](docs/INTERVIEW_GUIDE_E01_E06.md)。
 
@@ -97,7 +116,7 @@ configs/serve/        vLLM 服务对照配置
 configs/bench/        benchmark 工作负载配置
 configs/matrix/       可展开的正式实验矩阵
 configs/train/        QLoRA smoke、主实验与 rank 消融配置
-configs/admission/    E08 开放到达轨迹、策略与冻结门槛
+configs/admission/    E08/E09 开放到达轨迹、策略与冻结门槛
 src/qwen_serve_lab/   配置校验、命令生成与环境采集
 scripts/              WSL2 初始化入口
 artifacts/            环境快照和原始实验结果，不提交大文件
@@ -212,6 +231,10 @@ E07 的研究问题、冻结质量/成本门槛见
 [E07 QLoRA 与 LoRA Serving 运行手册](docs/M3_E07_QLORA_LORA_RUNBOOK.md)。
 完整训练、质量、在线成本和部署结论见 [E07 实验结果](docs/E07_RESULTS.md)。
 [E07 结果模板](docs/E07_RESULTS_TEMPLATE.md) 保留为报告结构参考。
+
+E08/E09 的开放到达准入协议与结果见
+[E08 实验结果](docs/E08_RESULTS.md)、[E09 实验协议](docs/E09_PROTOCOL.md) 和
+[E09 Deadline-aware 正向结果](docs/E09_RESULTS.md)。
 
 详细边界和验收标准见 [项目章程](docs/PROJECT_CHARTER.md)、[可行性分析](docs/FEASIBILITY.md) 与 [实验协议](docs/EXPERIMENT_PROTOCOL.md)。
 
