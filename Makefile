@@ -8,7 +8,7 @@ E07_ADAPTER_PATH ?= artifacts/adapters/e07/rank8
 E08_CONFIG = configs/admission/e08.toml
 E09_CONFIG = configs/admission/e09.toml
 
-.PHONY: doctor collect-env repair-bench-deps download-model-modelscope render-baseline render-baseline-local serve-baseline serve-baseline-local render-prefix render-baseline-matrix bench-smoke bench-baseline bench-baseline-matrix summarize-pilot summarize render-e02 render-e02-local serve-e02 serve-e02-local render-e02-matrix bench-e02-pilot bench-e02-matrix summarize-e02 compare-e02 render-e04-off-local render-e04-on-local serve-e04-off-local serve-e04-on-local render-e04-off-matrix render-e04-on-matrix bench-e04-off-pilot bench-e04-on-pilot bench-e04-off-matrix bench-e04-on-matrix bench-e04-off-capacity bench-e04-on-capacity summarize-e04 compare-e04 diagnose-e04 run-e04-canary-off run-e04-canary-on compare-e04-canary render-e05-bf16-local render-e05-fp8-local serve-e05-bf16-local serve-e05-fp8-local render-e05-bf16-matrix render-e05-fp8-matrix bench-e05-bf16-pilot bench-e05-fp8-pilot bench-e05-bf16-matrix bench-e05-fp8-matrix run-e05-quality-bf16 run-e05-quality-fp8 summarize-e05 compare-e05 capacity-e05 compare-e05-quality summarize-e05-human-review finalize-e05 test
+.PHONY: doctor collect-env repair-bench-deps download-model-modelscope render-baseline render-baseline-local serve-baseline serve-baseline-local render-prefix render-baseline-matrix bench-smoke bench-baseline bench-baseline-matrix summarize-pilot summarize render-e02 render-e02-local serve-e02 serve-e02-local render-e02-matrix bench-e02-pilot bench-e02-matrix summarize-e02 compare-e02 render-e04-off-local render-e04-on-local serve-e04-off-local serve-e04-on-local render-e04-off-matrix render-e04-on-matrix bench-e04-off-pilot bench-e04-on-pilot bench-e04-off-matrix bench-e04-on-matrix bench-e04-off-capacity bench-e04-on-capacity summarize-e04 compare-e04 diagnose-e04 run-e04-canary-off run-e04-canary-on compare-e04-canary render-e05-bf16-local render-e05-fp8-local serve-e05-bf16-local serve-e05-fp8-local render-e05-bf16-matrix render-e05-fp8-matrix bench-e05-bf16-pilot bench-e05-fp8-pilot bench-e05-bf16-matrix bench-e05-fp8-matrix run-e05-quality-bf16 run-e05-quality-fp8 summarize-e05 compare-e05 capacity-e05 compare-e05-quality summarize-e05-human-review finalize-e05 charts check-charts test
 .PHONY: render-e06-bt8192-off-local render-e06-bt2048-off-local render-e06-bt8192-on-local render-e06-bt2048-on-local serve-e06-bt8192-off-local serve-e06-bt2048-off-local serve-e06-bt8192-on-local serve-e06-bt2048-on-local render-e06-bt8192-off-matrix render-e06-bt2048-off-matrix render-e06-bt8192-on-matrix render-e06-bt2048-on-matrix bench-e06-bt8192-off-pilot bench-e06-bt2048-off-pilot bench-e06-bt8192-on-pilot bench-e06-bt2048-on-pilot bench-e06-bt8192-off-matrix bench-e06-bt2048-off-matrix bench-e06-bt8192-on-matrix bench-e06-bt2048-on-matrix run-e06-canary-bt8192-off run-e06-canary-bt2048-off run-e06-canary-bt8192-on run-e06-canary-bt2048-on summarize-e06 compare-e06 compare-e06-canary audit-e01-e06
 .PHONY: install-e07-train-deps prepare-e07-data audit-e07-readiness render-e07-smoke train-e07-smoke train-e07-rank8 train-e07-rank16 inspect-e07-adapter render-e07-base-local render-e07-lora-local serve-e07-base-local serve-e07-lora-local render-e07-base-matrix render-e07-lora-matrix bench-e07-base-pilot bench-e07-lora-pilot bench-e07-base-matrix bench-e07-lora-matrix run-e07-quality-base run-e07-quality-lora summarize-e07 compare-e07 compare-e07-quality summarize-e07-human-review finalize-e07
 .PHONY: prepare-e08-traces audit-e08-readiness render-e08-local serve-e08-local bench-e08-pilot-unbounded bench-e08-pilot-fixed bench-e08-pilot-token bench-e08-matrix bench-e08-matrix-resume compare-e08
@@ -438,6 +438,12 @@ bench-e09-matrix-resume:
 
 compare-e09:
 	$(QSL) compare-e09 --config $(E09_CONFIG)
+
+charts:
+	$(PYTHON) scripts/generate_readme_charts.py
+
+check-charts:
+	$(PYTHON) scripts/generate_readme_charts.py --check
 
 test:
 	PYTHONPATH=src $(PYTHON) -m unittest discover -s tests -v

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="430" viewBox="0 0 980 430" role="img" aria-labelledby="title desc">
+<title id="title">Selected TTFT improvements</title>
+<desc id="desc">Generated from committed QwenServe-12G experiment reports.</desc>
+<style>
+text { font-family: Helvetica, Arial, sans-serif; }
+</style>
+<rect x="0" y="0" width="980" height="430" rx="16" fill="#ffffff"/>
+<text x="40" y="42" font-family="Arial" font-size="24" font-weight="700" fill="#0f172a" text-anchor="start">Selected P95 TTFT reductions</text>
+<text x="40" y="68" font-family="Arial" font-size="13" font-weight="400" fill="#64748b" text-anchor="start">Controlled comparisons only · lower latency is better</text>
+<line x1="295" y1="96" x2="295" y2="358" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4 5"/>
+<text x="295" y="382" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="middle">0%</text>
+<line x1="396.667" y1="96" x2="396.667" y2="358" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4 5"/>
+<text x="396.667" y="382" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="middle">10%</text>
+<line x1="498.333" y1="96" x2="498.333" y2="358" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4 5"/>
+<text x="498.333" y="382" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="middle">20%</text>
+<line x1="600" y1="96" x2="600" y2="358" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4 5"/>
+<text x="600" y="382" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="middle">30%</text>
+<line x1="701.667" y1="96" x2="701.667" y2="358" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4 5"/>
+<text x="701.667" y="382" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="middle">40%</text>
+<line x1="803.333" y1="96" x2="803.333" y2="358" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4 5"/>
+<text x="803.333" y="382" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="middle">50%</text>
+<line x1="905" y1="96" x2="905" y2="358" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4 5"/>
+<text x="905" y="382" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="middle">60%</text>
+<text x="277" y="134" font-family="Arial" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">Batch budget · Long C4</text>
+<rect x="295" y="112" width="215.83" height="30" rx="7" fill="#3b82f6"/>
+<text x="520.83" y="133" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">21.23%</text>
+<text x="277" y="186" font-family="Arial" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">Batch budget · Long C8</text>
+<rect x="295" y="164" width="485.379" height="30" rx="7" fill="#3b82f6"/>
+<text x="790.379" y="185" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">47.74%</text>
+<text x="277" y="238" font-family="Arial" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">APC · 79% hit · C8</text>
+<rect x="295" y="216" width="560.282" height="30" rx="7" fill="#10b981"/>
+<text x="865.282" y="237" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">55.11%</text>
+<text x="277" y="290" font-family="Arial" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">Combined · reuse50 · C4</text>
+<rect x="295" y="268" width="239.426" height="30" rx="7" fill="#f59e0b"/>
+<text x="544.426" y="289" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">23.55%</text>
+<text x="277" y="342" font-family="Arial" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">Combined · reuse90 · C8</text>
+<rect x="295" y="320" width="109.623" height="30" rx="7" fill="#f59e0b"/>
+<text x="414.623" y="341" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">10.78%</text>
+<text x="40" y="412" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">E02 compares batch-token 2048 vs 8192; E06 compares the combined setting vs the best single factor.</text>
+</svg>

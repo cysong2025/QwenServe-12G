@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="430" viewBox="0 0 980 430" role="img" aria-labelledby="title desc">
+<title id="title">Quality and capacity trade-offs</title>
+<desc id="desc">Generated from committed QwenServe-12G experiment reports.</desc>
+<style>
+text { font-family: Helvetica, Arial, sans-serif; }
+</style>
+<rect x="0" y="0" width="980" height="430" rx="16" fill="#ffffff"/>
+<text x="40" y="42" font-family="Arial" font-size="24" font-weight="700" fill="#0f172a" text-anchor="start">Quality and capacity trade-offs</text>
+<text x="40" y="68" font-family="Arial" font-size="13" font-weight="400" fill="#64748b" text-anchor="start">A gain is deployable only when its frozen quality and latency gates also pass</text>
+<rect x="40" y="96" width="430" height="285" rx="14" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+<rect x="40" y="96" width="6" height="285" rx="3" fill="#ef4444"/>
+<text x="64" y="130" font-family="Arial" font-size="18" font-weight="700" fill="#0f172a" text-anchor="start">E05 · FP8 KV cache</text>
+<rect x="510" y="96" width="430" height="285" rx="14" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+<rect x="510" y="96" width="6" height="285" rx="3" fill="#10b981"/>
+<text x="534" y="130" font-family="Arial" font-size="18" font-weight="700" fill="#0f172a" text-anchor="start">E07 · QLoRA / LoRA</text>
+<text x="64" y="169" font-family="Arial" font-size="32" font-weight="800" fill="#3b82f6" text-anchor="start">2.009×</text>
+<text x="64" y="193" font-family="Arial" font-size="12" font-weight="400" fill="#64748b" text-anchor="start">KV token capacity</text>
+<text x="246" y="211" font-family="Arial" font-size="11" font-weight="700" fill="#64748b" text-anchor="end">BF16</text>
+<text x="294" y="211" font-family="Arial" font-size="11" font-weight="700" fill="#ef4444" text-anchor="start">FP8</text>
+<text x="64" y="232" font-family="Arial" font-size="12" font-weight="400" fill="#64748b" text-anchor="start">Schema pass</text>
+<text x="246" y="232" font-family="Arial" font-size="13" font-weight="650" fill="#0f172a" text-anchor="end">92.0%</text>
+<text x="270" y="232" font-family="Arial" font-size="14" font-weight="700" fill="#64748b" text-anchor="middle">→</text>
+<text x="294" y="232" font-family="Arial" font-size="13" font-weight="700" fill="#ef4444" text-anchor="start">70.0%</text>
+<text x="64" y="274" font-family="Arial" font-size="12" font-weight="400" fill="#64748b" text-anchor="start">Root-cause F1</text>
+<text x="246" y="274" font-family="Arial" font-size="13" font-weight="650" fill="#0f172a" text-anchor="end">71.9%</text>
+<text x="270" y="274" font-family="Arial" font-size="14" font-weight="700" fill="#64748b" text-anchor="middle">→</text>
+<text x="294" y="274" font-family="Arial" font-size="13" font-weight="700" fill="#ef4444" text-anchor="start">57.0%</text>
+<text x="64" y="316" font-family="Arial" font-size="12" font-weight="400" fill="#64748b" text-anchor="start">Action F1</text>
+<text x="246" y="316" font-family="Arial" font-size="13" font-weight="650" fill="#0f172a" text-anchor="end">52.1%</text>
+<text x="270" y="316" font-family="Arial" font-size="14" font-weight="700" fill="#64748b" text-anchor="middle">→</text>
+<text x="294" y="316" font-family="Arial" font-size="13" font-weight="700" fill="#ef4444" text-anchor="start">36.5%</text>
+<rect x="64" y="343" width="250" height="25" rx="12" fill="#fee2e2"/>
+<text x="189" y="360" font-family="Arial" font-size="11" font-weight="700" fill="#b91c1c" text-anchor="middle">Capacity PASS · quality FAIL</text>
+<text x="716" y="169" font-family="Arial" font-size="11" font-weight="700" fill="#64748b" text-anchor="end">Base</text>
+<text x="764" y="169" font-family="Arial" font-size="11" font-weight="700" fill="#10b981" text-anchor="start">LoRA</text>
+<text x="534" y="210" font-family="Arial" font-size="12" font-weight="400" fill="#64748b" text-anchor="start">Schema pass</text>
+<text x="716" y="210" font-family="Arial" font-size="13" font-weight="650" fill="#0f172a" text-anchor="end">92.0%</text>
+<text x="740" y="210" font-family="Arial" font-size="14" font-weight="700" fill="#64748b" text-anchor="middle">→</text>
+<text x="764" y="210" font-family="Arial" font-size="13" font-weight="700" fill="#10b981" text-anchor="start">100.0%</text>
+<text x="534" y="252" font-family="Arial" font-size="12" font-weight="400" fill="#64748b" text-anchor="start">Root-cause F1</text>
+<text x="716" y="252" font-family="Arial" font-size="13" font-weight="650" fill="#0f172a" text-anchor="end">71.9%</text>
+<text x="740" y="252" font-family="Arial" font-size="14" font-weight="700" fill="#64748b" text-anchor="middle">→</text>
+<text x="764" y="252" font-family="Arial" font-size="13" font-weight="700" fill="#10b981" text-anchor="start">93.7%</text>
+<text x="534" y="294" font-family="Arial" font-size="12" font-weight="400" fill="#64748b" text-anchor="start">Action F1</text>
+<text x="716" y="294" font-family="Arial" font-size="13" font-weight="650" fill="#0f172a" text-anchor="end">52.1%</text>
+<text x="740" y="294" font-family="Arial" font-size="14" font-weight="700" fill="#64748b" text-anchor="middle">→</text>
+<text x="764" y="294" font-family="Arial" font-size="13" font-weight="700" fill="#10b981" text-anchor="start">94.0%</text>
+<rect x="534" y="343" width="320" height="25" rx="12" fill="#fef3c7"/>
+<text x="694" y="360" font-family="Arial" font-size="11" font-weight="700" fill="#92400e" text-anchor="middle">Quality PASS · online latency FAIL (4/6 cells)</text>
+<text x="40" y="414" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">Both negative deployment decisions are preserved; neither result is relabeled as a successful default.</text>
+</svg>

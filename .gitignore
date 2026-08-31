@@ -28,3 +28,8 @@ artifacts/results/*
 artifacts/server/*
 !artifacts/server/.gitkeep
 artifacts/adapters/
+
+# Local-only review backups and resume material
+reports/e05_kv_cache/human_review.backup.csv
+docs/RESUME_PROJECT_E01_E09.md
+resume_materials/

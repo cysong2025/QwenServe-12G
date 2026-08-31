@@ -1,6 +1,6 @@
 # Codex Agent Handoff
 
-Last updated: 2026-08-30
+Last updated: 2026-08-31
 
 This document is the handoff entry point for continuing QwenServe-12G in a new
 Codex task. Read it before changing code or asking the user to run GPU work.
@@ -23,7 +23,8 @@ The main question is:
 ## 2. Current handoff state
 
 - GitHub repository: `git@github.com:cysong2025/QwenServe-12G.git`
-- Active branch: `codex/e09-deadline-admission`
+- Active branch: `codex/open-source-readme` (based on the completed
+  `codex/e09-deadline-admission` result branch).
 - Mac workspace: `/Users/songchuangye/Documents/推理训练`
 - WSL2 E08 workspace: `~/projects/QwenServe-12G-e08`
 - WSL2 E09 workspace: `~/projects/QwenServe-12G-e09`
@@ -39,6 +40,11 @@ The main question is:
   headroom, absolute SLO, error-rate, and fairness gates. Final status is
   `PASS`.
 - CPU/static verification at handoff: 91 tests passed.
+- The public README now presents the architecture, measured results, quick
+  start, and limitations with four report-derived SVGs. `make check-charts`
+  and GitHub Actions prevent chart/report drift.
+- The obsolete E07 result template and redundant `reports/.gitkeep` were
+  removed; compact scientific CSV/JSON/Markdown evidence remains committed.
 - Completed E07 online matrix: 36 formal runs, comprising Base and rank-8 LoRA,
   six workload/concurrency cells each, three repetitions per cell; error rate 0.
 
@@ -356,7 +362,6 @@ listed by the E08 runbook.
 - `docs/E07_DATA_CARD.md`: generated training/validation/test data provenance.
 - `docs/M3_E07_QLORA_LORA_RUNBOOK.md`: authoritative manual GPU sequence.
 - `docs/E07_RESULTS.md`: measured result, deployment decision, and limitations.
-- `docs/E07_RESULTS_TEMPLATE.md`: retained report-shape reference.
 - `reports/e07_lora/readiness.md`: pre-GPU audit status.
 - `configs/train/e07_*.toml`: smoke, rank-8, and rank-16 training configs.
 - `configs/serve/e07_base.toml`: Base serving profile.
