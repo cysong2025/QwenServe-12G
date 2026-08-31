@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="980" height="470" viewBox="0 0 980 470" role="img" aria-labelledby="title desc">
-<title id="title">E09 SLO goodput comparison</title>
+<title id="title">Burst traffic SLO goodput comparison</title>
 <desc id="desc">Generated from committed QwenServe-12G experiment reports.</desc>
 <style>
 text { font-family: Helvetica, Arial, sans-serif; }
 </style>
 <rect x="0" y="0" width="980" height="470" rx="16" fill="#ffffff"/>
-<text x="40" y="42" font-family="Arial" font-size="24" font-weight="700" fill="#0f172a" text-anchor="start">E09 — SLO goodput under open-arrival traffic</text>
+<text x="40" y="42" font-family="Arial" font-size="24" font-weight="700" fill="#0f172a" text-anchor="start">Burst traffic: SLO goodput</text>
 <text x="40" y="68" font-family="Arial" font-size="13" font-weight="400" fill="#64748b" text-anchor="start">Median of 3 frozen holdout repetitions · higher is better</text>
 <line x1="76" y1="366" x2="926" y2="366" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4 5"/>
 <text x="64" y="371" font-family="Arial" font-size="12" font-weight="400" fill="#64748b" text-anchor="end">0.0</text>
@@ -20,32 +20,32 @@ text { font-family: Helvetica, Arial, sans-serif; }
 <text x="64" y="125.545" font-family="Arial" font-size="12" font-weight="400" fill="#64748b" text-anchor="end">2.0</text>
 <text x="22" y="231" font-family="Arial" font-size="12" font-weight="400" fill="#64748b" text-anchor="start">req/s</text>
 <rect x="127.667" y="242.591" width="52" height="123.409" rx="6" fill="#64748b"/>
-<text x="153.667" y="234.591" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.006</text>
+<text x="153.667" y="234.591" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.01</text>
 <rect x="191.667" y="260.318" width="52" height="105.682" rx="6" fill="#3b82f6"/>
-<text x="217.667" y="252.318" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">0.861</text>
+<text x="217.667" y="252.318" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">0.86</text>
 <rect x="255.667" y="242.591" width="52" height="123.409" rx="6" fill="#10b981"/>
-<text x="281.667" y="234.591" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.006</text>
+<text x="281.667" y="234.591" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.01</text>
 <text x="217.667" y="394" font-family="Arial" font-size="13" font-weight="600" fill="#0f172a" text-anchor="middle">Nominal</text>
 <rect x="411" y="191.455" width="52" height="174.545" rx="6" fill="#64748b"/>
-<text x="437" y="183.455" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.422</text>
+<text x="437" y="183.455" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.42</text>
 <rect x="475" y="237.136" width="52" height="128.864" rx="6" fill="#3b82f6"/>
-<text x="501" y="229.136" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.050</text>
+<text x="501" y="229.136" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.05</text>
 <rect x="539" y="158.727" width="52" height="207.273" rx="6" fill="#10b981"/>
-<text x="565" y="150.727" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.689</text>
+<text x="565" y="150.727" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.69</text>
 <text x="501" y="394" font-family="Arial" font-size="13" font-weight="600" fill="#0f172a" text-anchor="middle">Periodic burst</text>
-<text x="501" y="417" font-family="Arial" font-size="11" font-weight="700" fill="#10b981" text-anchor="middle">+18.75% vs best baseline</text>
+<text x="501" y="417" font-family="Arial" font-size="11" font-weight="700" fill="#10b981" text-anchor="middle">+19% vs best baseline</text>
 <rect x="694.333" y="201.682" width="52" height="164.318" rx="6" fill="#64748b"/>
-<text x="720.333" y="193.682" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.339</text>
+<text x="720.333" y="193.682" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.34</text>
 <rect x="758.333" y="243.955" width="52" height="122.045" rx="6" fill="#3b82f6"/>
-<text x="784.333" y="235.955" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">0.994</text>
+<text x="784.333" y="235.955" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">0.99</text>
 <rect x="822.333" y="173.045" width="52" height="192.955" rx="6" fill="#10b981"/>
-<text x="848.333" y="165.045" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.572</text>
+<text x="848.333" y="165.045" font-family="Arial" font-size="11" font-weight="600" fill="#0f172a" text-anchor="middle">1.57</text>
 <text x="784.333" y="394" font-family="Arial" font-size="13" font-weight="600" fill="#0f172a" text-anchor="middle">Shock burst</text>
-<text x="784.333" y="417" font-family="Arial" font-size="11" font-weight="700" fill="#10b981" text-anchor="middle">+17.43% vs best baseline</text>
+<text x="784.333" y="417" font-family="Arial" font-size="11" font-weight="700" fill="#10b981" text-anchor="middle">+17% vs best baseline</text>
 <rect x="580" y="47" width="12" height="12" rx="3" fill="#64748b"/>
-<text x="598" y="58" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">Unbounded</text>
+<text x="598" y="58" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">No limit</text>
 <rect x="705" y="47" width="12" height="12" rx="3" fill="#3b82f6"/>
-<text x="723" y="58" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">Fixed C4</text>
+<text x="723" y="58" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">Concurrency cap</text>
 <rect x="830" y="47" width="12" height="12" rx="3" fill="#10b981"/>
 <text x="848" y="58" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">Deadline-aware</text>
 <text x="40" y="448" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">Frozen scope: Qwen2.5-3B · RTX 5070 · BF16 KV · batch-token 2048 · APC off</text>

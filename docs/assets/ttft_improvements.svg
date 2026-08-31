@@ -24,18 +24,18 @@ text { font-family: Helvetica, Arial, sans-serif; }
 <text x="905" y="382" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="middle">60%</text>
 <text x="277" y="134" font-family="Arial" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">Batch budget · Long C4</text>
 <rect x="295" y="112" width="215.83" height="30" rx="7" fill="#3b82f6"/>
-<text x="520.83" y="133" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">21.23%</text>
+<text x="520.83" y="133" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">21%</text>
 <text x="277" y="186" font-family="Arial" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">Batch budget · Long C8</text>
 <rect x="295" y="164" width="485.379" height="30" rx="7" fill="#3b82f6"/>
-<text x="790.379" y="185" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">47.74%</text>
+<text x="790.379" y="185" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">48%</text>
 <text x="277" y="238" font-family="Arial" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">APC · 79% hit · C8</text>
 <rect x="295" y="216" width="560.282" height="30" rx="7" fill="#10b981"/>
-<text x="865.282" y="237" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">55.11%</text>
+<text x="865.282" y="237" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">55%</text>
 <text x="277" y="290" font-family="Arial" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">Combined · reuse50 · C4</text>
 <rect x="295" y="268" width="239.426" height="30" rx="7" fill="#f59e0b"/>
-<text x="544.426" y="289" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">23.55%</text>
+<text x="544.426" y="289" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">24%</text>
 <text x="277" y="342" font-family="Arial" font-size="13" font-weight="600" fill="#0f172a" text-anchor="end">Combined · reuse90 · C8</text>
 <rect x="295" y="320" width="109.623" height="30" rx="7" fill="#f59e0b"/>
-<text x="414.623" y="341" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">10.78%</text>
-<text x="40" y="412" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">E02 compares batch-token 2048 vs 8192; E06 compares the combined setting vs the best single factor.</text>
+<text x="414.623" y="341" font-family="Arial" font-size="12" font-weight="700" fill="#0f172a" text-anchor="start">11%</text>
+<text x="40" y="412" font-family="Arial" font-size="11" font-weight="400" fill="#64748b" text-anchor="start">Batch-token compares 2048 vs 8192; combined tuning compares against the best single factor.</text>
 </svg>

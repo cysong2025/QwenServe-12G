@@ -161,20 +161,20 @@ def render_architecture() -> str:
     return _svg(width, height, "QwenServe-12G architecture", body)
 
 
-def render_e09_goodput() -> str:
+def render_burst_goodput() -> str:
     report = _load_json("reports/e09_deadline_admission/final.json")
     profiles = report["profiles"]
     width, height = 980, 470
     left, top, chart_w, chart_h = 76, 96, 850, 270
     max_value = 2.2
     policies = [
-        ("unbounded_goodput", "Unbounded", SLATE),
-        ("fixed_goodput", "Fixed C4", BLUE),
+        ("unbounded_goodput", "No limit", SLATE),
+        ("fixed_goodput", "Concurrency cap", BLUE),
         ("deadline_goodput", "Deadline-aware", GREEN),
     ]
     names = ["Nominal", "Periodic burst", "Shock burst"]
     body = [
-        _text(40, 42, "E09 — SLO goodput under open-arrival traffic", size=24, weight=700),
+        _text(40, 42, "Burst traffic: SLO goodput", size=24, weight=700),
         _text(
             40,
             68,
@@ -202,7 +202,7 @@ def render_e09_goodput() -> str:
             x = start_x + policy_index * (bar_w + gap)
             y = top + chart_h - bar_h
             body.append(_rect(x, y, bar_w, bar_h, fill=color, radius=6))
-            body.append(_text(x + bar_w / 2, y - 8, f"{value:.3f}", size=11, weight=600, anchor="middle"))
+            body.append(_text(x + bar_w / 2, y - 8, f"{value:.2f}", size=11, weight=600, anchor="middle"))
         body.append(_text(group_x + group_w / 2, top + chart_h + 28, display_name, size=13, weight=600, anchor="middle"))
         gain = float(profile["deadline_goodput_gain_percent"])
         if gain > 0:
@@ -210,7 +210,7 @@ def render_e09_goodput() -> str:
                 _text(
                     group_x + group_w / 2,
                     top + chart_h + 51,
-                    f"+{gain:.2f}% vs best baseline",
+                    f"+{gain:.0f}% vs best baseline",
                     size=11,
                     weight=700,
                     fill=GREEN,
@@ -224,7 +224,7 @@ def render_e09_goodput() -> str:
         body.append(_rect(x, 47, 12, 12, fill=color, radius=3))
         body.append(_text(x + 18, 58, label, size=11, fill=MUTED))
     body.append(_text(40, 448, "Frozen scope: Qwen2.5-3B · RTX 5070 · BF16 KV · batch-token 2048 · APC off", size=11, fill=MUTED))
-    return _svg(width, height, "E09 SLO goodput comparison", body)
+    return _svg(width, height, "Burst traffic SLO goodput comparison", body)
 
 
 def render_ttft_improvements() -> str:
@@ -273,8 +273,8 @@ def render_ttft_improvements() -> str:
         body.append(_text(bar_x - 18, y + 22, label, size=13, weight=600, anchor="end"))
         width_value = value / max_value * bar_w
         body.append(_rect(bar_x, y, width_value, 30, fill=color, radius=7))
-        body.append(_text(bar_x + width_value + 10, y + 21, f"{value:.2f}%", size=12, weight=700))
-    body.append(_text(40, 412, "E02 compares batch-token 2048 vs 8192; E06 compares the combined setting vs the best single factor.", size=11, fill=MUTED))
+        body.append(_text(bar_x + width_value + 10, y + 21, f"{value:.0f}%", size=12, weight=700))
+    body.append(_text(40, 412, "Batch-token compares 2048 vs 8192; combined tuning compares against the best single factor.", size=11, fill=MUTED))
     return _svg(width, height, "Selected TTFT improvements", body)
 
 
@@ -289,7 +289,7 @@ def render_tradeoffs() -> str:
         _text(40, 68, "A gain is deployable only when its frozen quality and latency gates also pass", size=13, fill=MUTED),
     ]
 
-    panels = [(40, "E05 · FP8 KV cache", RED), (510, "E07 · QLoRA / LoRA", GREEN)]
+    panels = [(40, "FP8 KV cache", RED), (510, "QLoRA / LoRA", GREEN)]
     for x, title, color in panels:
         body.append(_rect(x, 96, 430, 285, fill=PANEL, radius=14, stroke=GRID))
         body.append(_rect(x, 96, 6, 285, fill=color, radius=3))
@@ -298,7 +298,7 @@ def render_tradeoffs() -> str:
     cap_ratio = float(capacity["fp8_to_bf16_token_capacity_ratio"])
     body.extend(
         [
-            _text(64, 169, f"{cap_ratio:.3f}×", size=32, weight=800, fill=BLUE),
+            _text(64, 169, f"{cap_ratio:.1f}×", size=32, weight=800, fill=BLUE),
             _text(64, 193, "KV token capacity", size=12, fill=MUTED),
         ]
     )
@@ -312,9 +312,9 @@ def render_tradeoffs() -> str:
     for index, (label, before, after) in enumerate(e05_metrics):
         y = 232 + index * 42
         body.append(_text(64, y, label, size=12, fill=MUTED))
-        body.append(_text(246, y, f"{before*100:.1f}%", size=13, weight=650, anchor="end"))
+        body.append(_text(246, y, f"{before*100:.0f}%", size=13, weight=650, anchor="end"))
         body.append(_text(270, y, "→", size=14, weight=700, fill=MUTED, anchor="middle"))
-        body.append(_text(294, y, f"{after*100:.1f}%", size=13, weight=700, fill=RED))
+        body.append(_text(294, y, f"{after*100:.0f}%", size=13, weight=700, fill=RED))
     body.append(_rect(64, 343, 250, 25, fill="#fee2e2", radius=12))
     body.append(_text(189, 360, "Capacity PASS · quality FAIL", size=11, weight=700, fill="#b91c1c", anchor="middle"))
 
@@ -328,9 +328,9 @@ def render_tradeoffs() -> str:
     for index, (label, before, after) in enumerate(e07_metrics):
         y = 210 + index * 42
         body.append(_text(534, y, label, size=12, fill=MUTED))
-        body.append(_text(716, y, f"{before*100:.1f}%", size=13, weight=650, anchor="end"))
+        body.append(_text(716, y, f"{before*100:.0f}%", size=13, weight=650, anchor="end"))
         body.append(_text(740, y, "→", size=14, weight=700, fill=MUTED, anchor="middle"))
-        body.append(_text(764, y, f"{after*100:.1f}%", size=13, weight=700, fill=GREEN))
+        body.append(_text(764, y, f"{after*100:.0f}%", size=13, weight=700, fill=GREEN))
     failed_cells = sum(
         1 for cell in e07_cells if cell.get("online_cost") != "PASS"
     )
@@ -354,7 +354,7 @@ def render_tradeoffs() -> str:
 def generated_assets() -> dict[Path, str]:
     return {
         ASSET_DIR / "system_architecture.svg": render_architecture(),
-        ASSET_DIR / "e09_goodput.svg": render_e09_goodput(),
+        ASSET_DIR / "burst_goodput.svg": render_burst_goodput(),
         ASSET_DIR / "ttft_improvements.svg": render_ttft_improvements(),
         ASSET_DIR / "quality_tradeoffs.svg": render_tradeoffs(),
     }
