@@ -135,6 +135,7 @@ make check-charts
 |---|---|
 | [项目章程](docs/PROJECT_CHARTER.md) | 研究问题、交付物和不做什么 |
 | [实验协议](docs/EXPERIMENT_PROTOCOL.md) | 通用重复、SLO、正确性与证据规范 |
+| [实验参数演进与项目总结](docs/EXPERIMENT_PARAMETER_EVOLUTION.md) | E01-E09 参数含义、调节原因、收益、失败实验与最终决策 |
 | [推理优化总结](docs/E01_E06_FINAL_REPORT.md) | 推理参数、前缀缓存、FP8 KV 和组合优化 |
 | [LoRA 训练协议](docs/E07_PROTOCOL.md) / [质量与部署结果](docs/E07_RESULTS.md) | QLoRA 训练、任务质量收益与在线成本 |
 | [Token-aware 准入结果](docs/E08_RESULTS.md) | 未达到收益门槛的策略与原因 |
